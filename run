@@ -1,0 +1,320 @@
+#! /bin/bash
+#
+# Run script for flywheel/hcp-struct Gear.
+#
+# Authorship: Keith Jamison
+#
+
+##############################################################################
+# Define directory names and containers
+
+FLYWHEEL_BASE=/flywheel/v0
+INPUT_DIR=$FLYWHEEL_BASE/input
+OUTPUT_DIR=$FLYWHEEL_BASE/output
+CONFIG_FILE=$FLYWHEEL_BASE/config.json
+CONTAINER='[flywheel/hcp-struct]'
+
+source ${FLYWHEEL_BASE}/docker-env.sh
+
+##############################################################################
+# Parse configuration options
+
+# If config.json exists, then we parse config file and cast vals to ENV Vars
+# (Flywheel gear run). Otherwise we parse manifest.json and cast the values to
+# ENV Vars from manifest (Docker run) Note value.default is used to grab the
+# configured defaults.
+
+ls ${FLYWHEEL_BASE}
+
+cat ${CONFIG_FILE}
+
+if [[ -f $CONFIG_FILE ]]; then
+  eval $(jq -r '.config | to_entries[] | "FW_CONFIG_\(.key)=\(.value)"' $CONFIG_FILE)
+	
+	eval $(jq -r '.inputs | to_entries[] | "inputpath_\(.key)=\(.value.location.path)"' $CONFIG_FILE)
+else
+  CONFIG_FILE=$FLYWHEEL_BASE/manifest.json
+  eval $(jq -r '.config | to_entries[] | "FW_CONFIG_\(.key)=\(.value.default)"' $CONFIG_FILE)
+fi
+
+##############################################################################
+
+# Set some pipeline defaults
+
+StudyFolder=${OUTPUT_DIR}
+
+PRINTCOM=""
+QUEUE=""
+
+LogFileDir=${OUTPUT_DIR}/logs
+mkdir -p ${LogFileDir}
+FSLSUBOPTIONS="-l ${LogFileDir}"
+
+
+#Config Settings
+StructuralUnwarpDir="z" #z appears to be best or "NONE" if not used
+StructuralDeltaTE="NONE" #DeltaTE for GRE fieldmap used to correct STRUCTURAL
+StructuralDwellTime="NONE" # DwellTime for SpinEchoFieldMap when TOPUP is used for STRUCTURAL (ie: not T1wSampleSpacing)
+
+AvgrdcSTRING="NONE" # = Distortion correction for Structural pipeline (NONE, FIELDMAP==SiemensFieldMap, GeneralElectricFieldMap, TOPUP) 
+# --> TOPUP requires SpinEchoPhaseEncodeNegative, SpinEchoPhaseEncodePositive
+# --> SiemensFieldMap requires MagnitudeInputName, PhaseInputName
+# --> GeneralElectricFieldMap requires GEB0InputName
+
+GEB0InputName="NONE"
+SpinEchoPhaseEncodeNegative="NONE"
+SpinEchoPhaseEncodePositive="NONE"
+MagnitudeInputName="NONE"
+PhaseInputName="NONE"
+UnwarpDir="NONE"
+SEUnwarpDir="NONE"
+
+GradientDistortionCoeffs="NONE" #no gradient correction unless we find a .grad file in the input directory
+
+
+#######################################
+
+# Current inputs: 
+#		T1w = Look for *T1w*.nii* in input directory (>=1 image, can be multiple)
+#		T2w = Look for *T2w*.nii* in input directory (>=1 image, can be multiple )
+#		scanner gradfile = Look for *.grad in input directory (if not found, use "NONE")
+
+#T1wInputImages=$( find ${T1_INPUT_DIR} -iname '*.nii*' )
+#T2wInputImages=$( find ${T2_INPUT_DIR} -iname '*.nii*' )
+
+#GradFile=$( find ${GradientCoeff_INPUT_DIR} | head -n1 )
+
+T1wInputImages=${inputpath_T1}
+T2wInputImages=${inputpath_T2}	
+GradFile=${inputpath_GradientCoeff}
+
+echo "T1 input: ${inputpath_T1}"
+echo "T2 input: ${inputpath_T2}"
+echo "GradientCoeff input: ${inputpath_GradientCoeff}"
+
+find ${INPUT_DIR}
+
+if [[ -z "$T1wInputImages" ]]; then
+  echo "$CONTAINER  INPUT_DIR has no valid T1w files!"
+  exit 1
+fi
+
+if [[ -z "$T2wInputImages" ]]; then
+  echo "$CONTAINER  INPUT_DIR has no valid T2w files!"
+  exit 1
+fi
+
+if [[ -e "$GradFile" ]]; then
+	GradientDistortionCoeffs="$GradFile"
+	#TODO: add "siemens" vs "GE" to pipeline for gradient unwarping
+	#GradientDistortionCoeffs_vendor="siemens"
+fi
+
+Subject=${FW_CONFIG_Subject}
+RegName=${FW_CONFIG_RegName}
+BrainSize=${FW_CONFIG_BrainSize}
+TemplateSize=${FW_CONFIG_TemplateSize}
+
+UnwarpDir=$StructuralUnwarpDir
+DeltaTE=$StructuralDeltaTE
+DwellTime=$StructuralDwellTime
+
+# TODO: UnwarpDir, DeltaTE, DwellTime, AvgrdcSTRING etc.. from config? from input directory?
+# TODO: do we delete existing files in output? NO!!!
+# TODO: Gear spec says they want outputs "flat" but that isn't really feasible
+
+
+#######################################
+FNIRTConfig="${HCPPIPEDIR_Config}/T1_2_MNI152_2mm.cnf" #FNIRT 2mm T1w Config
+TopUpConfig="${HCPPIPEDIR_Config}/b02b0.cnf" #Topup config if using TOPUP, set to NONE if using regular FIELDMAP
+
+GrayordinatesResolution="2" #Usually 2mm
+LowResMesh="32" #Usually 32k vertices
+GrayordinatesTemplate="91282_Greyordinates"
+
+HighResMesh="164" #Usually 164k vertices
+
+SurfaceAtlasDIR="${HCPPIPEDIR_Templates}/standard_mesh_atlases" #(Need to rename make surf.gii and add 32k)
+GrayordinatesSpaceDIR="${HCPPIPEDIR_Templates}/${GrayordinatesTemplate}" #(Need to copy these in)
+SubcorticalGrayLabels="${HCPPIPEDIR_Config}/FreeSurferSubcorticalLabelTableLut.txt"
+FreeSurferLabels="${HCPPIPEDIR_Config}/FreeSurferAllLut.txt"
+ReferenceMyelinMaps="${HCPPIPEDIR_Templates}/standard_mesh_atlases/Conte69.MyelinMap_BC.164k_fs_LR.dscalar.nii"
+
+#########################################################################################
+# Templates
+T1wTemplate="${HCPPIPEDIR_Templates}/MNI152_T1_${TemplateSize}.nii.gz" #MNI0.7mm template
+T1wTemplateBrain="${HCPPIPEDIR_Templates}/MNI152_T1_${TemplateSize}_brain.nii.gz" #Brain extracted MNI0.7mm template
+T1wTemplate2mm="${HCPPIPEDIR_Templates}/MNI152_T1_2mm.nii.gz" #MNI2mm template
+T2wTemplate="${HCPPIPEDIR_Templates}/MNI152_T2_${TemplateSize}.nii.gz" #MNI0.7mm T2wTemplate
+T2wTemplateBrain="${HCPPIPEDIR_Templates}/MNI152_T2_${TemplateSize}_brain.nii.gz" #Brain extracted MNI0.7mm T2wTemplate
+T2wTemplate2mm="${HCPPIPEDIR_Templates}/MNI152_T2_2mm.nii.gz" #MNI2mm T2wTemplate
+TemplateMask="${HCPPIPEDIR_Templates}/MNI152_T1_${TemplateSize}_brain_mask.nii.gz" #Brain mask MNI0.7mm template
+Template2mmMask="${HCPPIPEDIR_Templates}/MNI152_T1_2mm_brain_mask_dil.nii.gz" #MNI2mm template
+
+
+case $AvgrdcSTRING in 
+    NONE )
+      MagnitudeInputName="NONE"
+      PhaseInputName="NONE"
+      UnwarpDir="NONE"
+      ;;
+    TOPUP )
+      MagnitudeInputName="NONE"
+      PhaseInputName="NONE"
+      ;;
+    * )
+      MagnitudeInputName="NONE"
+      PhaseInputName="NONE"
+esac
+
+################################################################################
+# Run PreFreeSurferPipeline.sh
+
+echo -e "${CONTAINER} Starting: PreFreeSurfer Pipeline"
+
+pipeline_status_code=0
+
+echo ${FSLDIR}/bin/fsl_sub ${QUEUE} ${FSLSUBOPTIONS} \
+   ${HCPPIPEDIR}/PreFreeSurfer/PreFreeSurferPipeline.sh \
+    --path="$StudyFolder" \
+    --subject="$Subject" \
+    --t1="$T1wInputImages" \
+    --t2="$T2wInputImages" \
+    --t1template="$T1wTemplate" \
+    --t1templatebrain="$T1wTemplateBrain" \
+    --t1template2mm="$T1wTemplate2mm" \
+    --t2template="$T2wTemplate" \
+    --t2templatebrain="$T2wTemplateBrain" \
+    --t2template2mm="$T2wTemplate2mm" \
+    --templatemask="$TemplateMask" \
+    --template2mmmask="$Template2mmMask" \
+    --brainsize="$BrainSize" \
+    --fnirtconfig="$FNIRTConfig" \
+    --fmapmag="$MagnitudeInputName" \
+    --fmapphase="$PhaseInputName" \
+		--fmapgeneralelectric="$GEB0InputName" \
+    --echodiff="$DeltaTE" \
+    --SEPhaseNeg="$SpinEchoPhaseEncodeNegative" \
+    --SEPhasePos="$SpinEchoPhaseEncodePositive" \
+    --echospacing="$DwellTime" \
+    --seunwarpdir="$SEUnwarpDir" \
+    --t1samplespacing="$T1wSampleSpacing" \
+    --t2samplespacing="$T2wSampleSpacing" \
+    --unwarpdir="$UnwarpDir" \
+    --gdcoeffs="$GradientDistortionCoeffs" \
+    --avgrdcmethod="$AvgrdcSTRING" \
+    --topupconfig="$TopupConfig" \
+    --printcom=$PRINTCOM
+    
+pipeline_status_code=$?
+
+if [[ $pipeline_status_code == 0 ]]; then
+	echo -e "${CONTAINER} PreFreeSurfer Pipeline Success!"
+else
+	echo -e "${CONTAINER} PreFreeSurfer Pipeline Failure!"
+	exit 1
+fi
+
+################################################################################
+# Run FreeSurferPipeline.sh
+
+echo -e "${CONTAINER} Starting: FreeSurfer Pipeline"
+
+SubjectDIR="${StudyFolder}/${Subject}/T1w" #Location to Put FreeSurfer Subject's Folder
+T1wImage="${StudyFolder}/${Subject}/T1w/T1w_acpc_dc_restore.nii.gz" #T1w FreeSurfer Input (Full Resolution)
+T1wImageBrain="${StudyFolder}/${Subject}/T1w/T1w_acpc_dc_restore_brain.nii.gz" #T1w FreeSurfer Input (Full Resolution)
+T2wImage="${StudyFolder}/${Subject}/T1w/T2w_acpc_dc_restore.nii.gz" #T2w FreeSurfer Input (Full Resolution)
+
+echo ${FSLDIR}/bin/fsl_sub ${QUEUE} ${FSLSUBOPTIONS} \
+   ${HCPPIPEDIR}/FreeSurfer/FreeSurferPipeline.sh \
+    --subject="$Subject" \
+    --subjectDIR="$SubjectDIR" \
+    --t1="$T1wImage" \
+    --t1brain="$T1wImageBrain" \
+    --t2="$T2wImage" \
+		--printcom=$PRINTCOM
+
+pipeline_status_code=$?
+
+if [[ $pipeline_status_code == 0 ]]; then
+	echo -e "${CONTAINER} FreeSurfer Pipeline Success!"
+else
+	echo -e "${CONTAINER} FreeSurfer Pipeline Failure!"
+	exit 1
+fi
+
+################################################################################
+# Run PostFreeSurferPipeline.sh
+
+echo -e "${CONTAINER} Starting: PostPreFreeSurfer Pipeline"
+
+echo ${FSLDIR}/bin/fsl_sub ${QUEUE} ${FSLSUBOPTIONS} \
+   ${HCPPIPEDIR}/PostFreeSurfer/PostFreeSurferPipeline.sh \
+    --path="$StudyFolder" \
+    --subject="$Subject" \
+    --surfatlasdir="$SurfaceAtlasDIR" \
+    --grayordinatesdir="$GrayordinatesSpaceDIR" \
+    --grayordinatesres="$GrayordinatesResolution" \
+    --hiresmesh="$HighResMesh" \
+    --lowresmesh="$LowResMesh" \
+    --subcortgraylabels="$SubcorticalGrayLabels" \
+    --freesurferlabels="$FreeSurferLabels" \
+    --refmyelinmaps="$ReferenceMyelinMaps" \
+		--regname="$RegName" \
+    --printcom=$PRINTCOM
+
+
+pipeline_status_code=$?
+
+if [[ $pipeline_status_code == 0 ]]; then
+ 	echo -e "${CONTAINER} PostFreeSurfer Pipeline Success!"
+else
+	echo -e "${CONTAINER} PostFreeSurfer Pipeline Failure!"
+	exit 1
+fi
+
+################################################################################
+# Generate HCPStructural QC Images
+
+echo -e "${CONTAINER} Starting: Structural QC Image Generation"
+
+SCENEDIR=${FLYWHEEL_BASE}/scenes
+SCRIPTDIR=${FLYWHEEL_BASE}/scripts
+
+qc_scene_template="${SCENEDIR}/TEMPLATE.hcpstruct_QC.very_inflated.164k_fs_LR.scene"
+qc_scene_file="${StudyFolder}/${Subject}/MNINonLinear/${Subject}.hcpstruct_QC.164k_fs_LR.scene"
+qc_scene_root="${StudyFolder}/${Subject}/"
+
+qc_outputdir="${StudyFolder}"
+mkdir -p ${qc_outputdir}
+
+qc_image_root="${qc_outputdir}/${Subject}.hcpstruct_QC."
+qc_image_params="1440 900" #qc image size
+
+${SCRIPTDIR}/hcpstruct_qc_images.sh \
+	${qc_scene_template} \
+	${qc_scene_file} \
+	${Subject} \
+	${qc_scene_root} \
+	${qc_image_root} \
+	${qc_image_params} > ${LogFileDir}/structuralqc.log
+
+pipeline_status_code=$?
+
+if [[ $pipeline_status_code == 0 ]]; then
+ 	echo -e "${CONTAINER} Structural QC Image Generation Success!"
+	echo -e "${CONTAINER} Structural Pipeline Complete!"
+	
+	outputzipname=hcpstruct_${Subject}.zip 
+	
+	cd ${StudyFolder}
+	zip -r ${OUTPUT_DIR}/${outputzipname} ${Subject}/ > ${LogFileDir}/resultzip.log
+	
+	echo "${CONTAINER} Zipped output file ${outputzipname}"
+else
+	echo -e "${CONTAINER} Structural QC Image Generation Failure!"
+	exit 1
+fi
+
+
+exit $pipeline_status_code

@@ -1,0 +1,46 @@
+{
+	"inputs": {
+		"T1": {
+      "location" : {
+          "path" : "/flywheel/v0/input/T1/MR-SE007-T1w_MPR.nii.gz",
+          "name" : "MR-SE007-T1w_MPR.nii.gz"
+      },
+			"object" : {
+				"info" : {
+						
+				}
+			}
+		},
+		
+		"T2": {
+      "location" : {
+          "path" : "/flywheel/v0/input/T2/MR-SE009-T2w_SPC.nii.gz",
+          "name" : "MR-SE009-T1w_SPC.nii.gz"
+      },
+			"object" : {
+				"info" : {
+						
+				}
+			}
+		},
+		
+		"GradientCoeff": {
+      "location" : {
+          "path" : "/flywheel/v0/input/GradientCoeff/CMRR_Prisma_coeff_AS82_full.grad",
+          "name" : "CMRR_Prisma_coeff_AS82_full.grad"
+      },
+			"object" : {
+				"info" : {
+						
+				}
+			}
+		}
+	},
+	
+	"config": {
+		"Subject": "111111",
+		"RegName": "MSMSulc",
+		"BrainSize" : 150,
+		"TemplateSize": "0.8mm"
+	}
+}

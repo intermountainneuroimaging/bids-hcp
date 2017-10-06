@@ -1,0 +1,78 @@
+{
+	"name": "hcp-struct",
+
+	"label": "HCP Structural Pipeline",
+
+	"description": "A gear that performs a task.",
+
+	"version": "1.0",
+
+	"author":  "Flywheel",
+
+	"maintainer":  "Keith Jamison",
+
+	"license": "Apache-2.0",
+
+	"url":     "http://example.example",
+
+	"source":  "http://example.example/code",
+
+
+	"config": {
+
+    "Subject": {
+    	"type": "string",
+			"default": "000000",
+			"description": "Subject ID"
+    },
+		
+		"RegName": {
+			"type": "string",
+			"default": "FS",
+			"description": "Surface registration type: either FS (freesurfer=default) or MSMSulc"
+		},
+		
+		"BrainSize": {
+			"type": "integer",
+			"default": 150,
+			"description": "Brain size in mm (in Superior-Inferior axis), typically 150 for adults"
+		},
+		
+		
+		"TemplateSize": {
+			"type": "string",
+			"default": "0.8mm",
+			"description": "Voxel size of HCP anatomical template. Best if matches input. Options = 0.7mm, 0.8mm, 1mm"
+		}
+		
+	},
+
+  "inputs": {
+    "T1": {
+			"description": "T1-weighted anatomical scan",
+      "base": "file",
+      "type": {
+        "enum": [
+          "nifti"
+        ]
+      }
+    },
+		
+    "T2": {
+			"description": "T2-weighted anatomical scan",
+      "base": "file",
+      "type": {
+        "enum": [
+          "nifti"
+        ]
+      }
+    },
+		
+    "GradientCoeff": {
+			"description": "Scanner gradient nonlinearity coefficient file", 
+      "base": "file",
+			"optional": true
+    }
+		
+  }
+}
