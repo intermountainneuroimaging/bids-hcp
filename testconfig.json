@@ -1,46 +1,142 @@
 {
-	"inputs": {
-		"T1": {
+  "inputs": {
+    "T1": {
       "location" : {
           "path" : "/flywheel/v0/input/T1/MR-SE007-T1w_MPR.nii.gz",
           "name" : "MR-SE007-T1w_MPR.nii.gz"
       },
-			"object" : {
-				"info" : {
-						
-				}
-			}
-		},
-		
-		"T2": {
+      "object" : {
+        "info" : {
+          "AcquisitionDateTime": "2013-11-02T18:07:30.937500",
+          "AcquisitionMatrixPE": 320,
+          "AcquisitionNumber": 1,
+          "AcquisitionTime": "18:07:30.937500",
+          "BaseResolution": 320,
+          "BodyPartExamined": "BRAIN",
+          "ConsistencyInfo": "N4_VD11D_LATEST_20110129",
+          "ConversionSoftware": "dcm2niix",
+          "ConversionSoftwareVersion": "v1.0.20170923 (OpenJPEG build) GCC4.8.4",
+          "DeviceSerialNumber": "45060",
+          "DwellTime": 7.4e-06,
+          "EchoTime": 0.00214,
+          "FlipAngle": 8,
+          "ImageType": [
+              "ORIGINAL",
+              "PRIMARY",
+              "M",
+              "ND"
+          ],
+          "InstitutionAddress": "Scott_Ave_4525_St_Louis_B45F9C_MO_US_63110",
+          "InstitutionName": "WASH_U",
+          "InversionTime": 1,
+          "MagneticFieldStrength": 3,
+          "Manufacturer": "Siemens",
+          "ManufacturersModelName": "ConnectomS",
+          "Modality": "MR",
+          "ParallelReductionFactorInPlane": 2,
+          "PartialFourier": 1,
+          "PercentPhaseFOV": 100,
+          "PhaseEncodingSteps": 351,
+          "PhaseOversampling": 0.1,
+          "PhaseResolution": 1,
+          "ProcedureStepDescription": "HCP_Phase2_User",
+          "ProtocolName": "T1w_MPR2",
+          "PulseSequenceDetails": "%CustomerSeq%_ps_tfl_xpace",
+          "ReceiveCoilActiveElements": "HEA;HEP",
+          "ReceiveCoilName": "Head_32",
+          "ReconMatrixPE": 320,
+          "RepetitionTime": 2.4,
+          "ScanOptions": "IR_WE",
+          "ScanningSequence": "GR_IR",
+          "SequenceName": "tfl3d1_16ns",
+          "SequenceVariant": "SK_SP_MP_OSP",
+          "SeriesDescription": "T1w_MPR2",
+          "SeriesInstanceUID": "1.2.276.0.7230010.3.1.4.470456592.480982.1383438874.11",
+          "SoftwareVersions": "syngo_MR_D11",
+          "StationName": "HCP3T",
+          "StudyID": "1",
+          "StudyInstanceUID": "1.3.12.2.1107.5.2.0.45060.30000013110221095303100000004"
+        }
+      }
+    },
+    
+    "T2": {
       "location" : {
           "path" : "/flywheel/v0/input/T2/MR-SE009-T2w_SPC.nii.gz",
           "name" : "MR-SE009-T1w_SPC.nii.gz"
       },
-			"object" : {
-				"info" : {
-						
-				}
-			}
-		},
-		
-		"GradientCoeff": {
+      "object" : {
+        "info" : {
+          "AcquisitionDateTime": "2013-11-02T18:15:55.367500",
+          "AcquisitionMatrixPE": 320,
+          "AcquisitionNumber": 1,
+          "AcquisitionTime": "18:15:55.367500",
+          "BaseResolution": 320,
+          "BodyPartExamined": "BRAIN",
+          "ConsistencyInfo": "N4_VD11D_LATEST_20110129",
+          "ConversionSoftware": "dcm2niix",
+          "ConversionSoftwareVersion": "v1.0.20170923 (OpenJPEG build) GCC4.8.4",
+          "DeviceSerialNumber": "45060",
+          "DwellTime": 2.1e-06,
+          "EchoTime": 0.565,
+          "EchoTrainLength": 314,
+          "FlipAngle": 120,
+          "ImageType": [
+            "ORIGINAL",
+            "PRIMARY",
+            "M",
+            "ND"
+          ],
+          "InstitutionAddress": "Scott_Ave_4525_St_Louis_B45F9C_MO_US_63110",
+          "InstitutionName": "WASH_U",
+          "MagneticFieldStrength": 3,
+          "Manufacturer": "Siemens",
+          "ManufacturersModelName": "ConnectomS",
+          "Modality": "MR",
+          "ParallelReductionFactorInPlane": 2,
+          "PartialFourier": 1,
+          "PercentPhaseFOV": 100,
+          "PhaseEncodingSteps": 349,
+          "PhaseOversampling": 0.1,
+          "PhaseResolution": 1,
+          "ProcedureStepDescription": "HCP_Phase2_User",
+          "ProtocolName": "T2w_SPC2",
+          "PulseSequenceDetails": "%CustomerSeq%_herbstm_tse_vfl_xpace",
+          "ReceiveCoilActiveElements": "HEA;HEP",
+          "ReceiveCoilName": "Head_32",
+          "ReconMatrixPE": 320,
+          "RepetitionTime": 3.2,
+          "ScanOptions": "PFP",
+          "ScanningSequence": "SE",
+          "SequenceName": "spc3d1_314ns",
+          "SequenceVariant": "SK_SP_OSP",
+          "SeriesDescription": "T2w_SPC2",
+          "SeriesInstanceUID": "1.2.276.0.7230010.3.1.4.470456592.481433.1383439616.11",
+          "SoftwareVersions": "syngo_MR_D11",
+          "StationName": "HCP3T",
+          "StudyID": "1",
+          "StudyInstanceUID": "1.3.12.2.1107.5.2.0.45060.30000013110221095303100000004"
+        }
+      }
+    },
+    
+    "GradientCoeff": {
       "location" : {
           "path" : "/flywheel/v0/input/GradientCoeff/CMRR_Prisma_coeff_AS82_full.grad",
           "name" : "CMRR_Prisma_coeff_AS82_full.grad"
       },
-			"object" : {
-				"info" : {
-						
-				}
-			}
-		}
-	},
-	
-	"config": {
-		"Subject": "111111",
-		"RegName": "MSMSulc",
-		"BrainSize" : 150,
-		"TemplateSize": "0.8mm"
-	}
+      "object" : {
+        "info" : {
+            
+        }
+      }
+    }
+  },
+  
+  "config": {
+    "Subject": "111111",
+    "RegName": "MSMSulc",
+    "BrainSize" : 150,
+    "TemplateSize": "0.8mm"
+  }
 }

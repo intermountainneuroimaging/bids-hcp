@@ -1,55 +1,60 @@
 {
-	"name": "hcp-struct",
+  "name": "hcp-struct",
 
-	"label": "HCP Structural Pipeline",
+  "label": "HCP Structural Pipeline",
 
-	"description": "A gear that performs a task.",
+  "description": "A gear that performs a task.",
 
-	"version": "1.0",
+  "version": "0.1-alpha",
 
-	"author":  "Flywheel",
+  "author":  "Flywheel",
 
-	"maintainer":  "Keith Jamison",
+  "maintainer":  "Keith Jamison",
 
-	"license": "Apache-2.0",
+  "license": "Apache-2.0",
 
-	"url":     "http://example.example",
+  "url":     "https://github.com/Washington-University/Pipelines",
 
-	"source":  "http://example.example/code",
+  "source":  "https://github.com/flywheel-apps/hcp-struct",
 
 
-	"config": {
+  "config": {
 
     "Subject": {
-    	"type": "string",
-			"default": "000000",
-			"description": "Subject ID"
+      "type": "string",
+      "default": "000000",
+      "description": "Subject ID"
     },
-		
-		"RegName": {
-			"type": "string",
-			"default": "FS",
-			"description": "Surface registration type: either FS (freesurfer=default) or MSMSulc"
-		},
-		
-		"BrainSize": {
-			"type": "integer",
-			"default": 150,
-			"description": "Brain size in mm (in Superior-Inferior axis), typically 150 for adults"
-		},
-		
-		
-		"TemplateSize": {
-			"type": "string",
-			"default": "0.8mm",
-			"description": "Voxel size of HCP anatomical template. Best if matches input. Options = 0.7mm, 0.8mm, 1mm"
-		}
-		
-	},
+    
+    "RegName": {
+      "type": "string",
+      "default": "FS",
+      "description": "Surface registration type: either FS (freesurfer=default) or MSMSulc"
+    },
+    
+    "BrainSize": {
+      "type": "integer",
+      "default": 150,
+      "description": "Brain size in mm (in Superior-Inferior axis), typically 150 for adults"
+    },
+    
+    "TemplateSize": {
+      "type": "string",
+      "default": "0.8mm",
+      "description": "Voxel size of HCP anatomical template. Best if matches input. Options = 0.7mm, 0.8mm, 1mm"
+    },
+    
+    "StructuralUnwarpDirection": {
+      "description": "Readout direction for structural scans ( 'x', 'x-', 'y', 'y-', 'z', 'z-' ). HCP default = 'z'",
+      "default": "z",
+      "type": "string"
+    }
+    
+  },
 
   "inputs": {
     "T1": {
-			"description": "T1-weighted anatomical scan",
+      "description": "T1-weighted anatomical scan",
       "base": "file",
       "type": {
         "enum": [
@@ -57,9 +62,9 @@
         ]
       }
     },
-		
+    
     "T2": {
-			"description": "T2-weighted anatomical scan",
+      "description": "T2-weighted anatomical scan",
       "base": "file",
       "type": {
         "enum": [
@@ -67,12 +72,69 @@
         ]
       }
     },
-		
+    
     "GradientCoeff": {
-			"description": "Scanner gradient nonlinearity coefficient file", 
+      "description": "Scanner gradient nonlinearity coefficient file", 
       "base": "file",
-			"optional": true
+      "optional": true
+    },
+    
+    "SpinEchoPositive": {
+      "description": "Spin echo field map for correcting T1w and T2w (Positive phase-encode, ie: R>>L or P>>A)",
+      "base": "file",
+      "type": {
+        "enum": [
+          "nifti"
+        ]
+      },
+      "optional": true
+    },
+    
+    "SpinEchoNegative": {
+      "description": "Spin echo field map for correcting T1w and T2w (Negative phase-encode, ie: L>>R or A>>P)",
+      "base": "file",
+      "type": {
+        "enum": [
+          "nifti"
+        ]
+      },
+      "optional": true
+    },
+    
+    "SiemensGREMagnitude": {
+      "base": "file",
+      "type": {
+        "enum": [
+          "nifti"
+        ]
+      },
+      "optional": true
+    },
+    
+    "SiemensGREPhase": {
+      "base": "file",
+      "type": {
+        "enum": [
+          "nifti"
+        ]
+      },
+      "optional": true
+    },
+    
+    "GeneralElectricFieldMap": {
+      "base": "file",
+      "type": {
+        "enum": [
+          "nifti"
+        ]
+      },
+      "optional": true
+    },
+    
+    "FreeSurferLicense": {
+      "description": "FreeSurfer license.txt file (found in $FREESURFER_HOME/license.txt)", 
+      "base": "file",
+      "optional": true
     }
-		
   }
 }

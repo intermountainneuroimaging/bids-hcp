@@ -7,7 +7,7 @@
 
 FROM ubuntu:trusty-20170817
 
-# Use Ubuntu 16.04 (required for MSM binary) - replace all "14.04" with "16.04", and all "trusty" with "xenial"
+# Use Ubuntu 16.04 (required for MSM ubuntu binary) - replace all "14.04" with "16.04", and all "trusty" with "xenial"
 #FROM ubuntu:xenial-20170915
 
 MAINTAINER Flywheel <support@flywheel.io>
@@ -109,17 +109,19 @@ ENV CARET7DIR=/usr/bin
 
 # Install gradient unwarp script
 # note: python-dev needed for Ubuntu 14.04 (but not for 16.04)
+# latest = v1.0.3
+# This commit fixes the memory bug: bab8930e37f1b8ad3a7e274b07c5b3f0f096be85
 RUN apt-get -y update \
-		&& apt-get install -y --no-install-recommends python-dev && \
+    && apt-get install -y --no-install-recommends python-dev && \
     apt-get install -y --no-install-recommends python-numpy && \
-		apt-get install -y --no-install-recommends python-scipy && \
-		apt-get install -y --no-install-recommends python-nibabel && \
-    wget https://github.com/Washington-University/gradunwarp/archive/v1.0.3.tar.gz -O gradunwarp.tar.gz && \
-		cd /opt/ && \
+    apt-get install -y --no-install-recommends python-scipy && \
+    apt-get install -y --no-install-recommends python-nibabel && \
+    wget https://github.com/Washington-University/gradunwarp/archive/bab8930e37f1b8ad3a7e274b07c5b3f0f096be85.tar.gz -O gradunwarp.tar.gz && \
+    cd /opt/ && \
     tar zxvf /gradunwarp.tar.gz && \
-		mv /opt/gradunwarp-* /opt/gradunwarp && \
+    mv /opt/gradunwarp-* /opt/gradunwarp && \
     cd /opt/gradunwarp/ && \
-		python setup.py install && \
+    python setup.py install && \
     rm /gradunwarp.tar.gz && \
     cd / && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
@@ -140,38 +142,18 @@ RUN apt-get -y update \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 ENV HCPPIPEDIR=/opt/HCP-Pipelines
-ENV HCPPIPEDIR_Templates=${HCPPIPEDIR}/global/templates
-ENV HCPPIPEDIR_Bin=${HCPPIPEDIR}/global/binaries
-ENV HCPPIPEDIR_Config=${HCPPIPEDIR}/global/config
-ENV HCPPIPEDIR_PreFS=${HCPPIPEDIR}/PreFreeSurfer/scripts
-ENV HCPPIPEDIR_FS=${HCPPIPEDIR}/FreeSurfer/scripts
-ENV HCPPIPEDIR_PostFS=${HCPPIPEDIR}/PostFreeSurfer/scripts
-ENV HCPPIPEDIR_fMRISurf=${HCPPIPEDIR}/fMRISurface/scripts
-ENV HCPPIPEDIR_fMRIVol=${HCPPIPEDIR}/fMRIVolume/scripts
-ENV HCPPIPEDIR_tfMRI=${HCPPIPEDIR}/tfMRI/scripts
-ENV HCPPIPEDIR_dMRI=${HCPPIPEDIR}/DiffusionPreprocessing/scripts
-ENV HCPPIPEDIR_dMRITract=${HCPPIPEDIR}/DiffusionTractography/scripts
-ENV HCPPIPEDIR_Global=${HCPPIPEDIR}/global/scripts
-ENV HCPPIPEDIR_tfMRIAnalysis=${HCPPIPEDIR}/TaskfMRIAnalysis/scripts
 
-#From Pipeline: try to reduce strangeness from locale and other environment settings
-ENV LC_ALL=C
-ENV LANGUAGE=C
-		
-#For HCP Pipeline v3.x
+#############################################
+# Install MSM binaries (from local directory)
 ENV MSMBin=${HCPPIPEDIR}/MSMBinaries
-#COPY MSM/Ubuntu/msm ${MSMBin}/msm
-#COPY MSM/MSMSulcStrainFinalconf ${MSMBin}/allparameterssulcDRconf
-
-#For HCP Pipeline v4.x
-ENV MSMBINDIR=${HCPPIPEDIR}/MSMBinaries
-ENV MSMCONFIGDIR=${HCPPIPEDIR}/MSMConfig
-#ENV MATLAB_COMPILER_RUNTIME=/media/myelin/brainmappers/HardDrives/1TB/MATLAB_Runtime/v901
-#ENV FSL_FIXDIR=/media/myelin/aahana/fix1.06
 
 # Copy MSM_HOCR_v2 binary, and latest HCP MSM config
 #COPY MSM/Ubuntu/msm ${MSMBin}/msm
 COPY MSM/Centos/msm ${MSMBin}/msm
+
+#For Pipeline v3.x:
+#COPY MSM/MSMSulcStrainFinalconf ${MSMBin}/allparameterssulcDRconf
+#############################################
 
 # Make directory for flywheel spec (v0)
 ENV FLYWHEEL /flywheel/v0
@@ -182,12 +164,12 @@ COPY run ${FLYWHEEL}/run
 COPY manifest.json ${FLYWHEEL}/manifest.json
 
 # Copy additional scripts and scenes
-COPY scripts/hcpstruct_*.sh ${FLYWHEEL}/scripts/
+COPY scripts/*.sh scripts/*.bat ${FLYWHEEL}/scripts/
 COPY scenes/TEMPLATE*.scene ${FLYWHEEL}/scenes/
 
 # ENV preservation for Flywheel Engine
 RUN env -u HOSTNAME -u PWD | \
   awk -F = '{ print "export " $1 "=\"" $2 "\"" }' > ${FLYWHEEL}/docker-env.sh
-	
+
 # Configure entrypoint
 ENTRYPOINT ["/flywheel/v0/run"]
