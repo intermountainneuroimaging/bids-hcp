@@ -81,17 +81,19 @@ GradientDistortionCoeffs="NONE" #no gradient correction unless we are provided w
 #######################################
 # Process inputs and config options from app
 
-T1wInputImages=${FW_INPUT_T1}
-T2wInputImages=${FW_INPUT_T2}
 
-if [[ -z "$T1wInputImages" ]]; then
+if [[ -z "${FW_INPUT_T1}" ]]; then
   echo -e "$CONTAINER  INPUT_DIR has no valid T1w files!"
   exit 1
+else
+  T1wInputImages="${FW_INPUT_T1}"
 fi
 
-if [[ -z "$T2wInputImages" ]]; then
+if [[ -z "${FW_INPUT_T2}" ]]; then
   echo -e "$CONTAINER  INPUT_DIR has no valid T2w files!"
   exit 1
+else
+  T2wInputImages="${FW_INPUT_T2}"
 fi
 
 # Read necessary acquisition params from T1w and T2w
@@ -175,6 +177,7 @@ GrayordinatesTemplate="91282_Greyordinates"       # (or 170494_Greyordinates = 1
 HighResMesh="164"                                 # Basically always 164k vertices
 
 #######################################
+# Additional pipeline inputs
 FNIRTConfig="${HCPPIPEDIR_Config}/T1_2_MNI152_2mm.cnf" #FNIRT 2mm T1w Config
 TopupConfig="${HCPPIPEDIR_Config}/b02b0.cnf" #Topup config if using TOPUP, set to NONE if using regular FIELDMAP
 
@@ -184,7 +187,7 @@ SubcorticalGrayLabels="${HCPPIPEDIR_Config}/FreeSurferSubcorticalLabelTableLut.t
 FreeSurferLabels="${HCPPIPEDIR_Config}/FreeSurferAllLut.txt"
 ReferenceMyelinMaps="${HCPPIPEDIR_Templates}/standard_mesh_atlases/Conte69.MyelinMap_BC.164k_fs_LR.dscalar.nii"
 
-# Template NIFTI files
+# MNI Atlas NIFTI files
 T1wTemplate="${HCPPIPEDIR_Templates}/MNI152_T1_${TemplateSize}.nii.gz" #MNI0.7mm template
 T1wTemplateBrain="${HCPPIPEDIR_Templates}/MNI152_T1_${TemplateSize}_brain.nii.gz" #Brain extracted MNI0.7mm template
 T1wTemplate2mm="${HCPPIPEDIR_Templates}/MNI152_T1_2mm.nii.gz" #MNI2mm template

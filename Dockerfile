@@ -1,10 +1,8 @@
-# Creates docker container that runs bxh-xcede-tools fmriqa algorithms
+# Creates docker container that runs HCP Pipeline algorithms
 #
 #
 
 # Use Ubuntu 14.04 LTS
-#FROM ubuntu:trusty-20170119
-
 FROM ubuntu:trusty-20170817
 
 # Use Ubuntu 16.04 (required for MSM ubuntu binary) - replace all "14.04" with "16.04", and all "trusty" with "xenial"
@@ -23,21 +21,6 @@ RUN apt-get update \
     curl \
     jq \
     python-pip
-
-
-# Add non-free sources
-#RUN echo deb http://neurodeb.pirsquared.org data main contrib non-free >> /etc/apt/sources.list.d/neurodebian.sources.list
-#RUN echo deb http://neurodeb.pirsquared.org xenial main contrib non-free >> /etc/apt/sources.list.d/neurodebian.sources.list
-
-# Install the validator
-#RUN apt-get update && \
-#    apt-get install -y curl && \
-#    curl -sL https://deb.nodesource.com/setup_6.x | bash - && \
-#    apt-get remove -y curl && \
-#    apt-get install -y nodejs && \
-#    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-
-#RUN npm install -g bids-validator@0.19.2
 
 # Download FreeSurfer
 RUN apt-get -y update \
@@ -59,7 +42,7 @@ RUN apt-get -y update \
     apt-get install -y tcsh bc tar libgomp1 perl-modules curl  && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Set up the environment
+# Set up the FreeSurfer environment
 ENV OS Linux
 ENV FS_OVERRIDE 0
 ENV FIX_VERTEX_AREA=
@@ -86,7 +69,7 @@ RUN apt-get update && \
     apt-get install -y fsl-core=5.0.9-4~nd14.04+1 && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Configure environment
+# Configure FSL environment
 ENV FSLDIR=/usr/share/fsl/5.0
 ENV FSL_DIR="${FSLDIR}"
 ENV FSLOUTPUTTYPE=NIFTI_GZ

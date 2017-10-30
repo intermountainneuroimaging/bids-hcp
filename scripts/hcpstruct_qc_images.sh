@@ -9,7 +9,6 @@ set -e
 #newscene=${newroot}/${newsubj}.hcpstruct_QC.scene
 #newscene=./${newsubj}.hcpstruct_QC.scene
 #imgroot=${newsubj}.164k_fs_LR.
-
 #imgparams="1440 900"
 
 templatescene=$1
@@ -28,21 +27,23 @@ templateroot="__TEMPLATE_HCPSTRUCT_SUBJECT_ROOTDIR__"
 
 catcmd="cat"
 if [[ "$templatescene" == *.tar.gz  ]]; then
-	catcmd="tar -xOzf"
+  catcmd="tar -xOzf"
 fi
 
+# replace template placeholders with new names and paths
 ${catcmd} ${templatescene} | tr '\n' '\v' | sed -E 's#"png">.+</Image>#"png"></Image>#g' | tr '\v' '\n' \
 | sed 's#'${templateroot}'#'${newroot}'#g' \
 | sed 's#'${templatesubj}'#'${newsubj}'#g' \
 > ${newscene}
 
-# step 3: for subject, run through QC scene and generate figures
+# parse scene file and return list of "num@name", eg: "1@myelin 2@aparc"
 scenenames=$( wb_command -file-information $newscene | grep -E '^#[0-9]+[[:space:]].+:[[:space:]]*$' | sed -E 's/^#([0-9]+)[[:space:]]+(.+):[[:space:]]*$/\1@\2/' )
 
+# Now loop through QC scene and generate figures
 for s in $scenenames; do
     scenenum=${s/@*/""}
     scenename=${s/*@/""}
-		echo -e "###################"
-		echo -e "Generating QC image #${scenenum} ${imgroot}${scenename}.png"
+    echo -e "###################"
+    echo -e "Generating QC image #${scenenum} ${imgroot}${scenename}.png"
     wb_command -show-scene $newscene $scenenum ${imgroot}${scenename}.png $imgparams 2>&1
 done

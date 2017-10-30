@@ -3,7 +3,7 @@
 
   "label": "HCP Structural Pipeline",
 
-  "description": "A gear that performs a task.",
+  "description": "Run HCP structural pipeline: PreFreeSurfer, FreeSurfer, PostFreeSurfer, and generate QC images",
 
   "version": "0.1-alpha",
 
@@ -29,7 +29,7 @@
     "RegName": {
       "type": "string",
       "default": "FS",
-      "description": "Surface registration type: either FS (freesurfer=default) or MSMSulc"
+      "description": "Surface registration type: either 'FS' (freesurfer=default) or 'MSMSulc'"
     },
     
     "BrainSize": {
@@ -102,6 +102,7 @@
     },
     
     "SiemensGREMagnitude": {
+      "description": "B0 GRE field map magnitude from a Siemens scanner (Must also provide SiemensGREPhase)", 
       "base": "file",
       "type": {
         "enum": [
@@ -112,6 +113,7 @@
     },
     
     "SiemensGREPhase": {
+      "description": "B0 GRE field map phase from a Siemens scanner (Must also provide SiemensGREMagnitude)", 
       "base": "file",
       "type": {
         "enum": [
@@ -122,6 +124,7 @@
     },
     
     "GeneralElectricFieldMap": {
+      "description": "B0 field map from a General Electric scanner", 
       "base": "file",
       "type": {
         "enum": [
