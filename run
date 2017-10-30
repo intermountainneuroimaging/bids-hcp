@@ -349,7 +349,7 @@ if [[ $pipeline_status_code == 0 ]]; then
   echo -e "${CONTAINER} Structural Pipeline Complete!"
   
   # If pipeline successful, zip outputs and clean up
-  outputzipname=hcpstruct_${Subject}.zip 
+  outputzipname=${Subject}_hcpstruct.zip 
   
   cd ${StudyFolder}
   echo -e "${CONTAINER} Zipping output file ${outputzipname}"

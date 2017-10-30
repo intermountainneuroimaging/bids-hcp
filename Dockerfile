@@ -113,7 +113,7 @@ RUN apt-get -y update \
 
 #latest v3.x = v3.22.0
 #latest v4.x = v4.0.0-alpha.5
-#Ugh... need to use this commit to fix bugs in v4.0.0-alpha.5: 90b0766636ba83f06c9198206cc7fa90117b0b11
+#Ugh... need to use this 2017-08-24 commit to fix bugs in v4.0.0-alpha.5: 90b0766636ba83f06c9198206cc7fa90117b0b11
 RUN apt-get -y update \
     && apt-get install -y --no-install-recommends python-numpy && \
     wget https://github.com/Washington-University/Pipelines/archive/90b0766636ba83f06c9198206cc7fa90117b0b11.tar.gz -O pipelines.tar.gz && \
