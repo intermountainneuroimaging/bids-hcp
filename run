@@ -159,7 +159,8 @@ if [[ -e "${FW_INPUT_FreeSurferLicense}" ]]; then
 fi
 
 Subject=${FW_CONFIG_Subject}
-RegName=${FW_CONFIG_RegName}
+RegName="FS" #Only allow FreeSurfer surface registration pending MSM license questions
+#RegName=${FW_CONFIG_RegName}
 BrainSize=${FW_CONFIG_BrainSize}
 TemplateSize=${FW_CONFIG_TemplateSize}
 UnwarpDir=${FW_CONFIG_StructuralUnwarpDirection}

@@ -26,12 +26,6 @@
       "description": "Subject ID"
     },
     
-    "RegName": {
-      "type": "string",
-      "default": "FS",
-      "description": "Surface registration type: either 'FS' (freesurfer=default) or 'MSMSulc'"
-    },
-    
     "BrainSize": {
       "type": "integer",
       "default": 150,

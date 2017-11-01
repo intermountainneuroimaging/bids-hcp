@@ -125,7 +125,8 @@ ENV HCPPIPEDIR=/opt/HCP-Pipelines
 ENV MSMBin=${HCPPIPEDIR}/MSMBinaries
 
 # Copy MSM_HOCR_v2 binary
-COPY MSM/Centos/msm ${MSMBin}/msm
+# Skip this for now pending license questions
+#COPY MSM/Centos/msm ${MSMBin}/msm
 #############################################
 
 # Make directory for flywheel spec (v0)
