@@ -123,17 +123,6 @@
       "optional": true
     },
     
-    "GeneralElectricFieldMap": {
-      "description": "B0 field map from a General Electric scanner", 
-      "base": "file",
-      "type": {
-        "enum": [
-          "nifti"
-        ]
-      },
-      "optional": true
-    },
-    
     "FreeSurferLicense": {
       "description": "FreeSurfer license.txt file (found in $FREESURFER_HOME/license.txt)", 
       "base": "file",
