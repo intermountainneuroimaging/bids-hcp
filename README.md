@@ -27,8 +27,6 @@
 * <code>\<subject\>_hcpstruct_QC.*.png</code>: QC images for visual inspection of output quality (details to come...)
 * Logs (details to come...)
 
-
-
 ## Important HCP Pipeline links
 * [HCP Pipelines](https://github.com/Washington-University/Pipelines)
 * [HCP Pipelines FAQ](https://github.com/Washington-University/Pipelines/wiki/FAQ)

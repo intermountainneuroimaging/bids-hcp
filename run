@@ -36,7 +36,6 @@ else
   eval $(jq -r '.config | to_entries[] | "FW_CONFIG_\(.key)=\(.value.default)"' $CONFIG_FILE)
 fi
 
-
 ##############################################################################
 # use "echo" for testing arguments without running scripts
 RUN_PRE=""
@@ -151,7 +150,6 @@ elif [[ -e "${FW_INPUT_GeneralElectricFieldMap}" ]]; then
   
   #GEB0InputName="${FW_INPUT_GeneralElectricFieldMap}"
   #AvgrdcSTRING="GeneralElectricFieldMap"
-  #StructuralDeltaTE=$(jq -r '.inputs["GeneralElectricFieldMap"].object.info.EchoTime // empty' ${CONFIG_FILE})
 fi
 
 # Install FreeSurfer license
@@ -196,15 +194,6 @@ T2wTemplateBrain="${HCPPIPEDIR_Templates}/MNI152_T2_${TemplateSize}_brain.nii.gz
 T2wTemplate2mm="${HCPPIPEDIR_Templates}/MNI152_T2_2mm.nii.gz" #MNI2mm T2wTemplate
 TemplateMask="${HCPPIPEDIR_Templates}/MNI152_T1_${TemplateSize}_brain_mask.nii.gz" #Brain mask MNI0.7mm template
 Template2mmMask="${HCPPIPEDIR_Templates}/MNI152_T1_2mm_brain_mask_dil.nii.gz" #MNI2mm template
-
-################################################################################
-# create dummy test files
-#mkdir -p ${StudyFolder}/${Subject}/T1w
-#mkdir -p ${StudyFolder}/${Subject}/MNINonLinear
-#mkdir -p ${StudyFolder}/${Subject}/T2w
-
-#cp ${T1wTemplate} ${StudyFolder}/${Subject}/T1w/T1wTemplate.nii.gz
-#cp ${T2wTemplate} ${StudyFolder}/${Subject}/T2w/T2wTemplate.nii.gz
 
 ################################################################################
 # Run PreFreeSurferPipeline.sh
@@ -333,13 +322,19 @@ qc_image_root="${qc_outputdir}/${Subject}.hcpstruct_QC."
 qc_image_params="1440 900" #qc image size
 
 set -x
-${RUN_QC} ${SCRIPT_DIR}/hcpstruct_qc_images.sh \
+${RUN_QC} ${SCRIPT_DIR}/hcpstruct_qc_scenes.sh \
   ${qc_scene_template} \
   ${qc_scene_file} \
   ${Subject} \
   ${qc_scene_root} \
   ${qc_image_root} \
   ${qc_image_params} > ${LogFileDir}/structuralqc.log
+
+${RUN_QC} ${SCRIPT_DIR}/hcpstruct_qc_mosaic.sh \
+  ${qc_scene_root} \
+  ${T1wTemplateBrain} \
+  ${qc_image_root} >> ${LogFileDir}/structuralqc.log
+
 set +x
 
 pipeline_status_code=$?
@@ -348,12 +343,17 @@ if [[ $pipeline_status_code == 0 ]]; then
   echo -e "${CONTAINER} Structural QC Image Generation Success!"
   echo -e "${CONTAINER} Structural Pipeline Complete!"
   
+  # zip pipeline logs
+  logzipname=pipeline_logs.zip
+  zip -z ${OUTPUT_DIR}/${logzipname} ${LogFileDir}/ > ${logzipname}.log
+  rm  ${LogFileDir}/*
+  
   # If pipeline successful, zip outputs and clean up
   outputzipname=${Subject}_hcpstruct.zip 
   
   cd ${StudyFolder}
   echo -e "${CONTAINER} Zipping output file ${outputzipname}"
-  zip -r ${OUTPUT_DIR}/${outputzipname} ${Subject}/ > ${LogFileDir}/resultzip.log
+  zip -r ${OUTPUT_DIR}/${outputzipname} ${Subject}/ > ${outputzipname}.log
   
   echo -e "${CONTAINER} Cleaning output directory"
   rm -rf ${StudyFolder}/${Subject}/

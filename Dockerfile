@@ -5,9 +5,6 @@
 # Use Ubuntu 14.04 LTS
 FROM ubuntu:trusty-20170817
 
-# Use Ubuntu 16.04 (required for MSM ubuntu binary) - replace all "14.04" with "16.04", and all "trusty" with "xenial"
-#FROM ubuntu:xenial-20170915
-
 MAINTAINER Flywheel <support@flywheel.io>
 
 # Install packages
@@ -81,9 +78,6 @@ ENV FSLTCLSH=/usr/bin/tclsh
 ENV FSLWISH=/usr/bin/wish
 ENV FSLOUTPUTTYPE=NIFTI_GZ
 
-# Create freesurfer license file (currently base64 encoded from BIDS)
-RUN echo "cHJpbnRmICJrcnp5c3p0b2YuZ29yZ29sZXdza2lAZ21haWwuY29tXG41MTcyXG4gKkN2dW12RVYzelRmZ1xuRlM1Si8yYzFhZ2c0RVxuIiA+IC9vcHQvZnJlZXN1cmZlci9saWNlbnNlLnR4dAo=" | base64 -d | sh
-
 # Install Connectome Workbench
 RUN apt-get update && apt-get -y install connectome-workbench=1.2.3-1~nd14.04+1
 
@@ -113,7 +107,7 @@ RUN apt-get -y update \
 
 #latest v3.x = v3.22.0
 #latest v4.x = v4.0.0-alpha.5
-#Ugh... need to use this 2017-08-24 commit to fix bugs in v4.0.0-alpha.5: 90b0766636ba83f06c9198206cc7fa90117b0b11
+#Need to use this 2017-08-24 commit to fix bugs in v4.0.0-alpha.5: 90b0766636ba83f06c9198206cc7fa90117b0b11
 RUN apt-get -y update \
     && apt-get install -y --no-install-recommends python-numpy && \
     wget https://github.com/Washington-University/Pipelines/archive/90b0766636ba83f06c9198206cc7fa90117b0b11.tar.gz -O pipelines.tar.gz && \
@@ -130,12 +124,8 @@ ENV HCPPIPEDIR=/opt/HCP-Pipelines
 # Install MSM binaries (from local directory)
 ENV MSMBin=${HCPPIPEDIR}/MSMBinaries
 
-# Copy MSM_HOCR_v2 binary, and latest HCP MSM config
-#COPY MSM/Ubuntu/msm ${MSMBin}/msm
+# Copy MSM_HOCR_v2 binary
 COPY MSM/Centos/msm ${MSMBin}/msm
-
-#For Pipeline v3.x:
-#COPY MSM/MSMSulcStrainFinalconf ${MSMBin}/allparameterssulcDRconf
 #############################################
 
 # Make directory for flywheel spec (v0)
