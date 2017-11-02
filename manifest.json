@@ -5,11 +5,11 @@
 
   "description": "Run HCP structural pipeline: PreFreeSurfer, FreeSurfer, PostFreeSurfer, and generate QC images",
 
-  "version": "0.1-alpha",
+  "version": "0.1.0",
 
-  "author":  "Flywheel",
+  "author":  "Human Connectome Project",
 
-  "maintainer":  "Keith Jamison",
+  "maintainer":  "Flywheel <support@flywheel.io>",
 
   "license": "Apache-2.0",
 
@@ -17,6 +17,11 @@
 
   "source":  "https://github.com/flywheel-apps/hcp-struct",
 
+  "custom": {
+
+     "docker-image": "flywheel/hcp-struct:v0.1.0"
+
+  	},
 
   "config": {
 
@@ -25,25 +30,25 @@
       "default": "000000",
       "description": "Subject ID"
     },
-    
+
     "BrainSize": {
       "type": "integer",
       "default": 150,
       "description": "Brain size in mm (in Superior-Inferior axis), typically 150 for adults"
     },
-    
+
     "TemplateSize": {
       "type": "string",
       "default": "0.8mm",
       "description": "Voxel size of HCP anatomical template. Best if matches input. Options = 0.7mm, 0.8mm, 1mm"
     },
-    
+
     "StructuralUnwarpDirection": {
       "description": "Readout direction for structural scans ( 'x', 'x-', 'y', 'y-', 'z', 'z-' ). HCP default = 'z'",
       "default": "z",
       "type": "string"
     }
-    
+
   },
 
   "inputs": {
@@ -56,7 +61,7 @@
         ]
       }
     },
-    
+
     "T2": {
       "description": "T2-weighted anatomical scan",
       "base": "file",
@@ -66,13 +71,13 @@
         ]
       }
     },
-    
+
     "GradientCoeff": {
       "description": "Scanner gradient nonlinearity coefficient file", 
       "base": "file",
       "optional": true
     },
-    
+
     "SpinEchoPositive": {
       "description": "Spin echo field map for correcting T1w and T2w (Positive phase-encode, ie: R>>L or P>>A)",
       "base": "file",
@@ -83,7 +88,7 @@
       },
       "optional": true
     },
-    
+
     "SpinEchoNegative": {
       "description": "Spin echo field map for correcting T1w and T2w (Negative phase-encode, ie: L>>R or A>>P)",
       "base": "file",
@@ -94,7 +99,7 @@
       },
       "optional": true
     },
-    
+
     "SiemensGREMagnitude": {
       "description": "B0 GRE field map magnitude from a Siemens scanner (Must also provide SiemensGREPhase)", 
       "base": "file",
@@ -105,7 +110,7 @@
       },
       "optional": true
     },
-    
+
     "SiemensGREPhase": {
       "description": "B0 GRE field map phase from a Siemens scanner (Must also provide SiemensGREMagnitude)", 
       "base": "file",
@@ -116,7 +121,7 @@
       },
       "optional": true
     },
-    
+
     "FreeSurferLicense": {
       "description": "FreeSurfer license.txt file (found in $FREESURFER_HOME/license.txt)", 
       "base": "file",
