@@ -80,7 +80,7 @@ nslices=$dim3
 slicewidth=$dim1
 
 #to make square mosaic, compute imgwidth=ncols*slicewidth
-imgwidth=$(python -c "import math, sys
+imgwidth=$(python -c "import math
 nslices=$nslices
 nsteps=$nsteps
 slicewidth=$slicewidth

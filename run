@@ -199,7 +199,7 @@ Template2mmMask="${HCPPIPEDIR_Templates}/MNI152_T1_2mm_brain_mask_dil.nii.gz" #M
 ################################################################################
 # Run PreFreeSurferPipeline.sh
 
-echo -e "${CONTAINER} Starting: PreFreeSurfer Pipeline"
+echo -e "${CONTAINER} [$(timestamp)] Starting: PreFreeSurfer Pipeline"
 
 pipeline_status_code=0
 
@@ -240,16 +240,16 @@ set +x
 pipeline_status_code=$?
 
 if [[ $pipeline_status_code == 0 ]]; then
-  echo -e "${CONTAINER} PreFreeSurfer Pipeline Success!"
+  echo -e "${CONTAINER} [$(timestamp)] PreFreeSurfer Pipeline Success!"
 else
-  echo -e "${CONTAINER} PreFreeSurfer Pipeline Failure!"
+  echo -e "${CONTAINER} [$(timestamp)] PreFreeSurfer Pipeline Failure!"
   exit 1
 fi
 
 ################################################################################
 # Run FreeSurferPipeline.sh
 
-echo -e "${CONTAINER} Starting: FreeSurfer Pipeline"
+echo -e "${CONTAINER} [$(timestamp)] Starting: FreeSurfer Pipeline"
 
 SubjectDIR="${StudyFolder}/${Subject}/T1w" #Location to Put FreeSurfer Subject's Folder
 T1wImage="${StudyFolder}/${Subject}/T1w/T1w_acpc_dc_restore.nii.gz" #T1w FreeSurfer Input (Full Resolution)
@@ -270,16 +270,16 @@ set +x
 pipeline_status_code=$?
 
 if [[ $pipeline_status_code == 0 ]]; then
-  echo -e "${CONTAINER} FreeSurfer Pipeline Success!"
+  echo -e "${CONTAINER} [$(timestamp)] FreeSurfer Pipeline Success!"
 else
-  echo -e "${CONTAINER} FreeSurfer Pipeline Failure!"
+  echo -e "${CONTAINER} [$(timestamp)] FreeSurfer Pipeline Failure!"
   exit 1
 fi
 
 ################################################################################
 # Run PostFreeSurferPipeline.sh
 
-echo -e "${CONTAINER} Starting: PostPreFreeSurfer Pipeline"
+echo -e "${CONTAINER} [$(timestamp)] Starting: PostPreFreeSurfer Pipeline"
 
 set -x
 ${RUN_POST} ${FSLDIR}/bin/fsl_sub ${QUEUE} ${FSLSUBOPTIONS} \
@@ -301,16 +301,16 @@ set +x
 pipeline_status_code=$?
 
 if [[ $pipeline_status_code == 0 ]]; then
-  echo -e "${CONTAINER} PostFreeSurfer Pipeline Success!"
+  echo -e "${CONTAINER} [$(timestamp)] PostFreeSurfer Pipeline Success!"
 else
-  echo -e "${CONTAINER} PostFreeSurfer Pipeline Failure!"
+  echo -e "${CONTAINER} [$(timestamp)] PostFreeSurfer Pipeline Failure!"
   exit 1
 fi
 
 ################################################################################
 # Generate HCPStructural QC Images
 
-echo -e "${CONTAINER} Starting: Structural QC Image Generation"
+echo -e "${CONTAINER} [$(timestamp)] Starting: Structural QC Image Generation"
 
 qc_scene_template="${SCENE_DIR}/TEMPLATE.hcpstruct_QC.very_inflated.164k_fs_LR.scene"
 qc_scene_file="${StudyFolder}/${Subject}/MNINonLinear/${Subject}.hcpstruct_QC.164k_fs_LR.scene"
@@ -341,25 +341,27 @@ set +x
 pipeline_status_code=$?
 
 if [[ $pipeline_status_code == 0 ]]; then
-  echo -e "${CONTAINER} Structural QC Image Generation Success!"
-  echo -e "${CONTAINER} Structural Pipeline Complete!"
-  
-  # zip pipeline logs
-  logzipname=pipeline_logs.zip
-  zip -z ${OUTPUT_DIR}/${logzipname} ${LogFileDir}/ > ${logzipname}.log
-  rm  ${LogFileDir}/*
+  echo -e "${CONTAINER} [$(timestamp)] Structural QC Image Generation Success!"
+  echo -e "${CONTAINER} [$(timestamp)] Structural Pipeline Complete!"
   
   # If pipeline successful, zip outputs and clean up
   outputzipname=${Subject}_hcpstruct.zip 
-  
+  echo -e "${CONTAINER} [$(timestamp)] Zipping output file ${outputzipname}"
   cd ${StudyFolder}
-  echo -e "${CONTAINER} Zipping output file ${outputzipname}"
-  zip -r ${OUTPUT_DIR}/${outputzipname} ${Subject}/ > ${outputzipname}.log
+  zip -r ${OUTPUT_DIR}/${outputzipname} ${Subject}/ > ${OUTPUT_DIR}/${outputzipname}.log
   
-  echo -e "${CONTAINER} Cleaning output directory"
+  # zip pipeline logs
+  logzipname=pipeline_logs.zip
+  echo -e "${CONTAINER} [$(timestamp)] Zipping pipeline logs to ${logzipname}"
+  cd ${OUTPUT_DIR}
+  zip -z ${OUTPUT_DIR}/${logzipname} ${LogFileDir}/ > ${OUTPUT_DIR}/${logzipname}.log
+  rm  ${LogFileDir}/*
+
+  echo -e "${CONTAINER} [$(timestamp)] Cleaning output directory"
   rm -rf ${StudyFolder}/${Subject}/
+  
 else
-  echo -e "${CONTAINER} Structural QC Image Generation Failure!"
+  echo -e "${CONTAINER} [$(timestamp)] Structural QC Image Generation Failure!"
   exit 1
 fi
 
