@@ -354,12 +354,11 @@ if [[ $pipeline_status_code == 0 ]]; then
   logzipname=pipeline_logs.zip
   echo -e "${CONTAINER} [$(timestamp)] Zipping pipeline logs to ${logzipname}"
   cd ${OUTPUT_DIR}
-  zip -z ${OUTPUT_DIR}/${logzipname} ${LogFileDir}/ > ${OUTPUT_DIR}/${logzipname}.log
-  rm  ${LogFileDir}/*
+  zip -r ${OUTPUT_DIR}/${logzipname} ${LogFileDir}/ > ${OUTPUT_DIR}/${logzipname}.log
 
   echo -e "${CONTAINER} [$(timestamp)] Cleaning output directory"
   rm -rf ${StudyFolder}/${Subject}/
-  
+  rm -rf ${LogFileDir}/
 else
   echo -e "${CONTAINER} [$(timestamp)] Structural QC Image Generation Failure!"
   exit 1
