@@ -154,7 +154,7 @@ fi
 
 # Install FreeSurfer license
 if [[ -e "${FW_INPUT_FreeSurferLicense}" ]]; then
-  echo -e "$CONTAINER: Copying user-supplied FreeSurfer license file to ${FREESURFER_HOME}/license.txt"
+  echo -e "$CONTAINER Copying user-supplied FreeSurfer license file to ${FREESURFER_HOME}/license.txt"
   cp -f "${FW_INPUT_FreeSurferLicense}" ${FREESURFER_HOME}/license.txt
 fi
 
@@ -196,6 +196,16 @@ T2wTemplate2mm="${HCPPIPEDIR_Templates}/MNI152_T2_2mm.nii.gz" #MNI2mm T2wTemplat
 TemplateMask="${HCPPIPEDIR_Templates}/MNI152_T1_${TemplateSize}_brain_mask.nii.gz" #Brain mask MNI0.7mm template
 Template2mmMask="${HCPPIPEDIR_Templates}/MNI152_T1_2mm_brain_mask_dil.nii.gz" #MNI2mm template
 
+# Check templates selected via user inputs exist
+if [[ ! -e "${T1wTemplate}" ]]; then
+  echo -e "$CONTAINER  Template image not found: ${T1wTemplate}! Invalid Template Size parameter specified: ${TemplateSize}"
+  exit 1
+fi
+
+if [[ ! -e "${GrayordinatesSpaceDIR}" ]]; then
+  echo -e "$CONTAINER  Grayordinates directory not found: ${GrayordinatesSpaceDIR}!"
+  exit 1
+fi
 ################################################################################
 # Run PreFreeSurferPipeline.sh
 
@@ -328,7 +338,7 @@ ${RUN_QC} ${SCRIPT_DIR}/hcpstruct_qc_scenes.sh \
   ${qc_scene_file} \
   ${Subject} \
   ${qc_scene_root} \
-  ${qc_image_root} \
+  ${qc_image_root}inflated_ \
   ${qc_image_params} > ${LogFileDir}/structuralqc.log
 
 ${RUN_QC} ${SCRIPT_DIR}/hcpstruct_qc_mosaic.sh \
