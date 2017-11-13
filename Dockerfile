@@ -73,7 +73,6 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends curl && \
     curl -sSL http://neuro.debian.net/lists/trusty.us-ca.full >> /etc/apt/sources.list.d/neurodebian.sources.list && \
     apt-key add /tmp/neurodebian_pgpkey.txt && \
-    rm -rf /tmp/neurodebian_pgpkey.txt && \
     apt-get update && \
     apt-get install -y fsl-core=5.0.9-4~nd14.04+1 && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
