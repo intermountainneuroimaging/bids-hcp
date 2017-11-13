@@ -19,7 +19,8 @@ RUN apt-get update \
     jq \
     python-pip
 
-# Download FreeSurfer
+#############################################
+# Download and install FreeSurfer
 RUN apt-get -y update \
     && apt-get install -y wget && \
     wget -qO- ftp://surfer.nmr.mgh.harvard.edu/pub/dist/freesurfer/5.3.0-HCP/freesurfer-Linux-centos4_x86_64-stable-pub-v5.3.0-HCP.tar.gz | tar zxv -C /opt \
@@ -57,11 +58,22 @@ ENV PERL5LIB /opt/freesurfer/mni/lib/perl5/5.8.5
 ENV MNI_PERL5LIB /opt/freesurfer/mni/lib/perl5/5.8.5
 ENV PATH /opt/freesurfer/bin:/opt/freesurfer/fsfast/bin:/opt/freesurfer/tktools:/opt/freesurfer/mni/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH
 
-# Install FSL 5.0.9
+#############################################
+# Download and install FSL 5.0.9
+
+#Build-time key retrieval is sometimes unable to connect to keyserver.  Instead, download the public key manually and store it in plaintext 
+#within repo.  You should run these commands occassionally to make sure the saved public key is up to date:
+#gpg --keyserver hkp://pgp.mit.edu:80  --recv 0xA5D32F012649A5A9 && \
+#gpg --export --armor 0xA5D32F012649A5A9 > neurodebian_pgpkey.txt && \
+#gpg --batch --yes --delete-keys 0xA5D32F012649A5A9
+
+COPY neurodebian_pgpkey.txt /tmp/
+
 RUN apt-get update && \
     apt-get install -y --no-install-recommends curl && \
     curl -sSL http://neuro.debian.net/lists/trusty.us-ca.full >> /etc/apt/sources.list.d/neurodebian.sources.list && \
-    apt-key adv --recv-keys --keyserver hkp://pgp.mit.edu:80 0xA5D32F012649A5A9 && \
+    apt-key add /tmp/neurodebian_pgpkey.txt && \
+    rm -rf /tmp/neurodebian_pgpkey.txt && \
     apt-get update && \
     apt-get install -y fsl-core=5.0.9-4~nd14.04+1 && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
@@ -78,13 +90,14 @@ ENV FSLTCLSH=/usr/bin/tclsh
 ENV FSLWISH=/usr/bin/wish
 ENV FSLOUTPUTTYPE=NIFTI_GZ
 
-# Install Connectome Workbench
+#############################################
+# Download and install Connectome Workbench
 RUN apt-get update && apt-get -y install connectome-workbench=1.2.3-1~nd14.04+1
 
 ENV CARET7DIR=/usr/bin
 
-
-# Install gradient unwarp script
+#############################################
+# Download and install gradient unwarp script
 # note: python-dev needed for Ubuntu 14.04 (but not for 16.04)
 # latest = v1.0.3
 # This commit fixes the memory bug: bab8930e37f1b8ad3a7e274b07c5b3f0f096be85
@@ -103,7 +116,8 @@ RUN apt-get -y update \
     cd / && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Install HCP Pipelines
+#############################################
+# Download and install HCP Pipelines
 
 #latest v3.x = v3.22.0
 #latest v4.x = v4.0.0-alpha.5

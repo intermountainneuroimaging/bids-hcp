@@ -8,6 +8,6 @@
   unset CDPATH
   cd "$( dirname "${BASH_SOURCE[0]}" )"
 
-	docker build --tag flywheel/hcp-struct .
+	docker build --no-cache --tag flywheel/hcp-struct .
 
 )
