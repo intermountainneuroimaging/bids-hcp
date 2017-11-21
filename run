@@ -365,12 +365,14 @@ fi
 outputzipname=${Subject}_hcpstruct.zip 
 echo -e "${CONTAINER} [$(timestamp)] Zipping output file ${outputzipname}"
 cd ${StudyFolder}
+rm -f ${OUTPUT_DIR}/${outputzipname}
 zip -r ${OUTPUT_DIR}/${outputzipname} ${Subject}/ > ${OUTPUT_DIR}/${outputzipname}.log
 
 # zip pipeline logs
 logzipname=pipeline_logs.zip
 echo -e "${CONTAINER} [$(timestamp)] Zipping pipeline logs to ${logzipname}"
 cd ${OUTPUT_DIR}
+rm -f ${OUTPUT_DIR}/${logzipname}
 zip -r ${OUTPUT_DIR}/${logzipname} ${LogFileDir}/ > ${OUTPUT_DIR}/${logzipname}.log
 
 echo -e "${CONTAINER} [$(timestamp)] Cleaning output directory"
