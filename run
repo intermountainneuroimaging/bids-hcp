@@ -361,6 +361,15 @@ fi
 ################################################################################
 # Clean-up and output prep
 
+# Add current gear config.json to output for reference in subsequent gears
+# - For now, don't copy full input json since it might contain identifiers from DICOM etc
+# - add/update .config.RegName since it might not have been included in config (pre-MSM availability)
+# - add/update .config.Subject since it might later be pulled from other session metadata
+# - This jq call does the value replacement, then selects just .config but stores it back into a 
+#    new element called ".config" so the new file can be read as though it was flywheel config.json
+OUTPUT_CONFIG_FILE=${StudyFolder}/${Subject}/${Subject}_hcpstruct_config.json
+jq -r '.config.RegName = "'$RegName'" | .config.Subject = "'$Subject'" | .config | {config: .}' $CONFIG_FILE > ${OUTPUT_CONFIG_FILE}
+
 # If pipeline successful, zip outputs and clean up
 outputzipname=${Subject}_hcpstruct.zip 
 echo -e "${CONTAINER} [$(timestamp)] Zipping output file ${outputzipname}"
