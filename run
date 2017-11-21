@@ -353,26 +353,28 @@ pipeline_status_code=$?
 if [[ $pipeline_status_code == 0 ]]; then
   echo -e "${CONTAINER} [$(timestamp)] Structural QC Image Generation Success!"
   echo -e "${CONTAINER} [$(timestamp)] Structural Pipeline Complete!"
-  
-  # If pipeline successful, zip outputs and clean up
-  outputzipname=${Subject}_hcpstruct.zip 
-  echo -e "${CONTAINER} [$(timestamp)] Zipping output file ${outputzipname}"
-  cd ${StudyFolder}
-  zip -r ${OUTPUT_DIR}/${outputzipname} ${Subject}/ > ${OUTPUT_DIR}/${outputzipname}.log
-  
-  # zip pipeline logs
-  logzipname=pipeline_logs.zip
-  echo -e "${CONTAINER} [$(timestamp)] Zipping pipeline logs to ${logzipname}"
-  cd ${OUTPUT_DIR}
-  zip -r ${OUTPUT_DIR}/${logzipname} ${LogFileDir}/ > ${OUTPUT_DIR}/${logzipname}.log
-
-  echo -e "${CONTAINER} [$(timestamp)] Cleaning output directory"
-  rm -rf ${StudyFolder}/${Subject}/
-  rm -rf ${LogFileDir}/
 else
   echo -e "${CONTAINER} [$(timestamp)] Structural QC Image Generation Failure!"
   exit 1
 fi
 
+################################################################################
+# Clean-up and output prep
+
+# If pipeline successful, zip outputs and clean up
+outputzipname=${Subject}_hcpstruct.zip 
+echo -e "${CONTAINER} [$(timestamp)] Zipping output file ${outputzipname}"
+cd ${StudyFolder}
+zip -r ${OUTPUT_DIR}/${outputzipname} ${Subject}/ > ${OUTPUT_DIR}/${outputzipname}.log
+
+# zip pipeline logs
+logzipname=pipeline_logs.zip
+echo -e "${CONTAINER} [$(timestamp)] Zipping pipeline logs to ${logzipname}"
+cd ${OUTPUT_DIR}
+zip -r ${OUTPUT_DIR}/${logzipname} ${LogFileDir}/ > ${OUTPUT_DIR}/${logzipname}.log
+
+echo -e "${CONTAINER} [$(timestamp)] Cleaning output directory"
+rm -rf ${StudyFolder}/${Subject}/
+rm -rf ${LogFileDir}/
 
 exit $pipeline_status_code
