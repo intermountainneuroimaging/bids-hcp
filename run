@@ -53,9 +53,10 @@ StudyFolder=${OUTPUT_DIR}
 PRINTCOM=""
 QUEUE=""
 
-LogFileDir=${OUTPUT_DIR}/logs
-mkdir -p ${LogFileDir}
-FSLSUBOPTIONS="-l ${LogFileDir}"
+LogFileDir=logs
+LogFileDirFull=${OUTPUT_DIR}/${LogFileDir}
+mkdir -p ${LogFileDirFull}
+FSLSUBOPTIONS="-l ${LogFileDirFull}"
 
 #Default Config Settings
 StructuralUnwarpDir="z" #z appears to be best or "NONE" if not used
@@ -339,12 +340,12 @@ ${RUN_QC} ${SCRIPT_DIR}/hcpstruct_qc_scenes.sh \
   ${Subject} \
   ${qc_scene_root} \
   ${qc_image_root}inflated_ \
-  ${qc_image_params} > ${LogFileDir}/structuralqc.log
+  ${qc_image_params} > ${LogFileDirFull}/structuralqc.log
 
 ${RUN_QC} ${SCRIPT_DIR}/hcpstruct_qc_mosaic.sh \
   ${qc_scene_root} \
   ${T1wTemplateBrain} \
-  ${qc_image_root} >> ${LogFileDir}/structuralqc.log
+  ${qc_image_root} >> ${LogFileDirFull}/structuralqc.log
 
 set +x
 
@@ -386,6 +387,6 @@ zip -r ${OUTPUT_DIR}/${logzipname} ${LogFileDir}/ > ${OUTPUT_DIR}/${logzipname}.
 
 echo -e "${CONTAINER} [$(timestamp)] Cleaning output directory"
 rm -rf ${StudyFolder}/${Subject}/
-rm -rf ${LogFileDir}/
+rm -rf ${LogFileDirFull}/
 
 exit $pipeline_status_code

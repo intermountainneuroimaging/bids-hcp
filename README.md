@@ -1,7 +1,7 @@
 # flywheel/hcp-struct
 [Flywheel Gear](https://github.com/flywheel-io/gears/tree/master/spec) that runs the structural preprocessing steps of the [Human Connectome Project](http://www.humanconnectome.org) Minimal Preprocessing Pipeline (MPP) described in [Glasser et al. 2013](http://www.ncbi.nlm.nih.gov/pubmed/23668970).  Currently, this includes v4.0-alpha release of PreFreeSurfer, FreeSurfer, and PostFreeSurfer pipelines, as well as generating some helpful QC images. For more info on the pipelines, see [HCP Pipelines](https://github.com/Washington-University/Pipelines).
 
-## Important Notes
+## Important notes
 * T1w and T2w volumes should not have any online bias-correction (e.g.: no "Pre-scan Normalize" option on Siemens scanners). If on-scanner bias-correction was applied, it must be applied to **BOTH** T1w and T2w inputs.
 * All MRI inputs (T1w, T2w, FieldMaps) must include BIDS-conformed DICOM metadata!
 * Gradient nonlinearity correction (using coefficient file) is currently only available for data from Siemens scanners.
@@ -10,6 +10,7 @@
 ## Required inputs
 1. T1-weighted anatomical volume (eg: MPRAGE), <= 1mm spatial resolution
 2. T2-weighted anatomical volume (eg: SPACE, FLAIR), <= 1mm spatial resolution
+3. FreeSurfer license.txt file  (found in <code>$FREESURFER_HOME/license.txt</code>)
 
 ## Optional inputs
 1. Field map for correcting readout distortion
@@ -20,11 +21,10 @@
 2. Gradient nonlinearity coefficients copied from scanner. See [FAQ 8. What is gradient nonlinearity correction?](https://github.com/Washington-University/Pipelines/wiki/FAQ#8-what-is-gradient-nonlinearity-correction)
     * If needed, this file can be obtained from the console at <code>C:\MedCom\MriSiteData\GradientCoil\coeff.grad</code> for Siemens scanners
     * Note: This effect is significant for HCP data collected on custom Siemens "ConnectomS" scanner, and for 7T scanners.  It is relatively minor for production 3T scanners (Siemens Trio, Prisma, etc.)
-3. FreeSurfer license.txt file  (found in <code>$FREESURFER_HOME/license.txt</code>)
 
 ## Outputs
-* <code>\<subject\>_hcpstruct.zip</code>: Zipped output directory containing complete MNINonLinear/ T1w/ and T2w/ folders
-* <code>\<subject\>_hcpstruct_QC.*.png</code>: QC images for visual inspection of output quality (details to come...)
+* <code>\<subject\>\_hcpstruct.zip</code>: Zipped output directory containing complete <code>MNINonLinear/</code>, <code>T1w/</code>, and <code>T2w/</code> folders.
+* <code>\<subject\>\_hcpstruct\_QC.*.png</code>: QC images for visual inspection of output quality (details to come...)
 * Logs (details to come...)
 
 ## Important HCP Pipeline links
