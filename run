@@ -83,14 +83,14 @@ GradientDistortionCoeffs="NONE" #no gradient correction unless we are provided w
 
 
 if [[ -z "${FW_INPUT_T1}" ]]; then
-  echo -e "$CONTAINER  INPUT_DIR has no valid T1w files!"
+  echo -e "$CONTAINER [$(timestamp)] INPUT_DIR has no valid T1w files!"
   exit 1
 else
   T1wInputImages="${FW_INPUT_T1}"
 fi
 
 if [[ -z "${FW_INPUT_T2}" ]]; then
-  echo -e "$CONTAINER  INPUT_DIR has no valid T2w files!"
+  echo -e "$CONTAINER [$(timestamp)] INPUT_DIR has no valid T2w files!"
   exit 1
 else
   T2wInputImages="${FW_INPUT_T2}"
@@ -121,10 +121,10 @@ if [[ -e "${FW_INPUT_SiemensGREPhase}" ]] && [[ -e "${FW_INPUT_SiemensGREMagnitu
   echotime2=$(jq -r '.inputs["SiemensGREPhase"].object.info.EchoTime // empty' ${CONFIG_FILE})
   
   if [[ -z "$echotime1" ]] || [[ -z "$echotime2" ]]; then
-    echo -e "$CONTAINER  No EchoTime metadata found in FieldMap input file!  Exiting."
+    echo -e "${CONTAINER} [$(timestamp)] No EchoTime metadata found in FieldMap input file!  Exiting."
     exit 1
   elif [[ "$echotime1" == "$echotime2" ]]; then
-    echo -e "$CONTAINER  EchoTime1 and EchoTime2 are the same (Please ensure Magnitude input is TE1)! Exiting."
+    echo -e "${CONTAINER} [$(timestamp)] EchoTime1 and EchoTime2 are the same (Please ensure Magnitude input is TE1)! Exiting."
     exit 1
   fi
   
@@ -134,19 +134,46 @@ if [[ -e "${FW_INPUT_SiemensGREPhase}" ]] && [[ -e "${FW_INPUT_SiemensGREMagnitu
   
 # For SpinEcho "TOPUP" FieldMap, must include both Pos and Neg phase encode
 elif [[ -e "${FW_INPUT_SpinEchoNegative}" ]] && [[ -e "${FW_INPUT_SpinEchoPositive}" ]]; then
-  SpinEchoPhaseEncodeNegative="${FW_INPUT_SpinEchoNegative}"
-  SpinEchoPhaseEncodePositive="${FW_INPUT_SpinEchoPositive}"
-  AvgrdcSTRING="TOPUP"
+  SpinEchoPhase1="${FW_INPUT_SpinEchoPositive}"
+  SpinEchoPhase2="${FW_INPUT_SpinEchoNegative}"
+
+  pedirSE1=$(jq -r '.inputs["SpinEchoPositive"].object.info.PhaseEncodingDirection // empty' ${CONFIG_FILE})
+  pedirSE2=$(jq -r '.inputs["SpinEchoNegative"].object.info.PhaseEncodingDirection // empty' ${CONFIG_FILE})
+  pedirSE1=$( echo "$pedirSE1" | tr "[ijk]" "[xyz]" )
+  pedirSE2=$( echo "$pedirSE2" | tr "[ijk]" "[xyz]" )
+  
+  if [[ -z "${pedirSE1}" ]]; then
+    echo -e "${CONTAINER} [$(timestamp)] SpinEchoPositive input is missing PhaseEncodingDirection metadata!"
+    exit 1
+  elif [[ -z "${pedirSE2}" ]]; then
+    echo -e "${CONTAINER} [$(timestamp)] SpinEchoNegative input data is missing PhaseEncodingDirection metadata!"
+    exit 1
+  elif [[ "${pedirSE1}" == "${pedirSE2}" ]]; then
+    echo -e "${CONTAINER} [$(timestamp)] SpinEchoPositive and SpinEchoNegative have the same PhaseEncodingDirection (${pedirSE1})!"
+    exit 1
+  fi
+  
+  if [[ "${pedirSE1},${pedirSE2}" == "x,x-" ]] || [[ "${pedirSE1},${pedirSE2}" == "y,y-" ]]; then
+    SpinEchoPhaseEncodePositive="${SpinEchoPhase1}"
+    SpinEchoPhaseEncodeNegative="${SpinEchoPhase2}"
+  elif [[ "${pedirSE1},${pedirSE2}" == "x-,x" ]] || [[ "${pedirSE1},${pedirSE2}" == "y-,y" ]]; then
+    SpinEchoPhaseEncodePositive="${SpinEchoPhase2}"
+    SpinEchoPhaseEncodeNegative="${SpinEchoPhase1}"
+    echo -e "${CONTAINER} [$(timestamp)] SpinEcho phase-encoding directions were swapped. Continuing!"
+  else
+    echo -e "${CONTAINER} [$(timestamp)] Unrecognized SpinEcho phase-encoding directions (${pedirSE1},${pedirSE2})!"
+    exit 1
+  fi
   
   StructuralDwellTime=$(print_decimal_number $(jq -r '.inputs["SpinEchoPositive"].object.info.EffectiveEchoSpacing // empty' ${CONFIG_FILE}))
-  
-  pedirPos=$(jq -r '.inputs["SpinEchoPositive"].object.info.PhaseEncodingDirection // empty' ${CONFIG_FILE})
-  pedirNeg=$(jq -r '.inputs["SpinEchoNegative"].object.info.PhaseEncodingDirection // empty' ${CONFIG_FILE})
-  SEUnwarpDir=$( echo "$pedirPos" | tr "[ijk]" "[xyz]" )
+  TopupDwellTime=$(print_decimal_number $(jq -r '.inputs["SpinEchoPositive"].object.info.EffectiveEchoSpacing // empty' ${CONFIG_FILE}))
+  pedirSE_plane=$( echo "${pedirSE1}" | sed -E 's/[-+]//g' )
+  SEUnwarpDir=${pedirSE_plane}
+  AvgrdcSTRING="TOPUP"
   
 elif [[ -e "${FW_INPUT_GeneralElectricFieldMap}" ]]; then
   #TODO: how do we handle GE fieldmap? where do we get deltaTE?
-  echo -e "$CONTAINER  Cannot currently handle GeneralElectricFieldmap!"
+  echo -e "${CONTAINER} [$(timestamp)] Cannot currently handle GeneralElectricFieldmap!"
   exit 1
   
   #GEB0InputName="${FW_INPUT_GeneralElectricFieldMap}"
@@ -199,18 +226,20 @@ Template2mmMask="${HCPPIPEDIR_Templates}/MNI152_T1_2mm_brain_mask_dil.nii.gz" #M
 
 # Check templates selected via user inputs exist
 if [[ ! -e "${T1wTemplate}" ]]; then
-  echo -e "$CONTAINER  Template image not found: ${T1wTemplate}! Invalid Template Size parameter specified: ${TemplateSize}"
+  echo -e "${CONTAINER} [$(timestamp)] Template image not found: ${T1wTemplate}! Invalid Template Size parameter specified: ${TemplateSize}"
   exit 1
 fi
 
 if [[ ! -e "${GrayordinatesSpaceDIR}" ]]; then
-  echo -e "$CONTAINER  Grayordinates directory not found: ${GrayordinatesSpaceDIR}!"
+  echo -e "${CONTAINER} [$(timestamp)] Grayordinates directory not found: ${GrayordinatesSpaceDIR}!"
   exit 1
 fi
 ################################################################################
 # Run PreFreeSurferPipeline.sh
 
 echo -e "${CONTAINER} [$(timestamp)] Starting: PreFreeSurfer Pipeline"
+
+mkdir -p ${StudyFolder}/${Subject}
 
 pipeline_status_code=0
 
@@ -369,7 +398,11 @@ fi
 # - This jq call does the value replacement, then selects just .config but stores it back into a 
 #    new element called ".config" so the new file can be read as though it was flywheel config.json
 OUTPUT_CONFIG_FILE=${StudyFolder}/${Subject}/${Subject}_hcpstruct_config.json
-jq -r '.config.RegName = "'$RegName'" | .config.Subject = "'$Subject'" | .config | {config: .}' $CONFIG_FILE > ${OUTPUT_CONFIG_FILE}
+jq -r '.config.RegName = "'"${RegName}"'" | .config.Subject = "'"${Subject}"'" | .config | {config: .}' $CONFIG_FILE \
+  | jq -r '.config.FinalfMRIResolution = "'"${FinalfMRIResolution}"'"' \
+  | jq -r '.config.GrayordinatesResolution = "'"${GrayordinatesResolution}"'"' \
+  | jq -r '.config.LowResMesh = "'"${LowResMesh}"'"' \
+  | jq -r '.config.SmoothingFWHM = "'"${SmoothingFWHM}"'"' > ${OUTPUT_CONFIG_FILE}
 
 # If pipeline successful, zip outputs and clean up
 outputzipname=${Subject}_hcpstruct.zip 
@@ -388,5 +421,9 @@ zip -r ${OUTPUT_DIR}/${logzipname} ${LogFileDir}/ > ${OUTPUT_DIR}/${logzipname}.
 echo -e "${CONTAINER} [$(timestamp)] Cleaning output directory"
 rm -rf ${StudyFolder}/${Subject}/
 rm -rf ${LogFileDirFull}/
+
+echo -e "${CONTAINER} [$(timestamp)] Final output directory listing:"
+cd ${OUTPUT_DIR}
+du -hs *
 
 exit $pipeline_status_code
