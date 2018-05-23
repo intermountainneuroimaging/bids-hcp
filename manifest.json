@@ -87,6 +87,11 @@
       "default": "000000",
       "description": "Subject ID (Default = 000000)"
     },
+    "RegName": {
+      "type": "string",
+      "default": "MSMSulc",
+      "description": "Surface registration type: either 'FS' (freesurfer) or 'MSMSulc' (HCP default)"
+    },
     "BrainSize": {
       "type": "integer",
       "default": 150,

@@ -22,6 +22,13 @@
     * If needed, this file can be obtained from the console at <code>C:\MedCom\MriSiteData\GradientCoil\coeff.grad</code> for Siemens scanners
     * Note: This effect is significant for HCP data collected on custom Siemens "ConnectomS" scanner, and for 7T scanners.  It is relatively minor for production 3T scanners (Siemens Trio, Prisma, etc.)
 
+## Configuration options
+1. Subject: Subject ID to use for outputs
+2. RegName: Surface registration type: either 'FS' (freesurfer) or 'MSMSulc' (HCP default). (See [FSL MSM](https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/MSM) for details on MSMSulc)
+3. BrainSize: Brain size in mm (in Superior-Inferior axis), typically 150 (default) for adults
+4. TemplateSize: Voxel size of HCP anatomical template. Best if matches input. (Options = 0.7mm, 0.8mm (default), 1mm)
+5. StructuralUnwarpDirection: Readout direction for structural scans ( 'x', 'x-', 'y', 'y-', 'z', 'z-' ). HCP default = 'z' (**Only used when providing fieldmaps to correct readout distortion**)
+
 ## Outputs
 * <code>\<subject\>\_hcpstruct.zip</code>: Zipped output directory containing complete <code>MNINonLinear/</code>, <code>T1w/</code>, and <code>T2w/</code> folders.
 * <code>\<subject\>\_hcpstruct\_QC.*.png</code>: QC images for visual inspection of output quality (details to come...)

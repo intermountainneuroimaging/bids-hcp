@@ -59,6 +59,7 @@ mkdir -p ${LogFileDirFull}
 FSLSUBOPTIONS="-l ${LogFileDirFull}"
 
 #Default Config Settings
+RegName="FS"
 StructuralUnwarpDir="z" #z appears to be best or "NONE" if not used
 StructuralDeltaTE="NONE" #DeltaTE for GRE fieldmap used to correct STRUCTURAL
 StructuralDwellTime="NONE" # DwellTime for SpinEchoFieldMap when TOPUP is used for STRUCTURAL (ie: not T1wSampleSpacing)
@@ -182,13 +183,22 @@ fi
 
 # Install FreeSurfer license
 if [[ -e "${FW_INPUT_FreeSurferLicense}" ]]; then
-  echo -e "$CONTAINER Copying user-supplied FreeSurfer license file to ${FREESURFER_HOME}/license.txt"
+  echo -e "$CONTAINER [$(timestamp)] Copying user-supplied FreeSurfer license file to ${FREESURFER_HOME}/license.txt"
   cp -f "${FW_INPUT_FreeSurferLicense}" ${FREESURFER_HOME}/license.txt
 fi
 
+# Check RegName config
+case $(toupper "${FW_CONFIG_RegName}") in
+  FS|MSMSULC)
+    RegName="${FW_CONFIG_RegName}"
+    ;;
+  *)
+    echo -e "$CONTAINER [$(timestamp)] RegName must be FS or MSMSulc!"
+    exit 1
+    ;;
+esac
+
 Subject=${FW_CONFIG_Subject}
-RegName="FS" #Only allow FreeSurfer surface registration pending MSM license questions
-#RegName=${FW_CONFIG_RegName}
 BrainSize=${FW_CONFIG_BrainSize}
 TemplateSize=${FW_CONFIG_TemplateSize}
 UnwarpDir=${FW_CONFIG_StructuralUnwarpDirection}
@@ -399,10 +409,10 @@ fi
 #    new element called ".config" so the new file can be read as though it was flywheel config.json
 OUTPUT_CONFIG_FILE=${StudyFolder}/${Subject}/${Subject}_hcpstruct_config.json
 jq -r '.config.RegName = "'"${RegName}"'" | .config.Subject = "'"${Subject}"'" | .config | {config: .}' $CONFIG_FILE \
-  | jq -r '.config.FinalfMRIResolution = "'"${FinalfMRIResolution}"'"' \
   | jq -r '.config.GrayordinatesResolution = "'"${GrayordinatesResolution}"'"' \
-  | jq -r '.config.LowResMesh = "'"${LowResMesh}"'"' \
-  | jq -r '.config.SmoothingFWHM = "'"${SmoothingFWHM}"'"' > ${OUTPUT_CONFIG_FILE}
+  | jq -r '.config.GrayordinatesTemplate = "'"${GrayordinatesTemplate}"'"' \
+  | jq -r '.config.HighResMesh = "'"${HighResMesh}"'"' \
+  | jq -r '.config.LowResMesh = "'"${LowResMesh}"'"' > ${OUTPUT_CONFIG_FILE}
 
 # If pipeline successful, zip outputs and clean up
 outputzipname=${Subject}_hcpstruct.zip 

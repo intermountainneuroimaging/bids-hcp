@@ -134,12 +134,13 @@ RUN apt-get -y update \
 ENV HCPPIPEDIR=/opt/HCP-Pipelines
 
 #############################################
-# Install MSM binaries (from local directory)
-ENV MSMBin=${HCPPIPEDIR}/MSMBinaries
+# Download amnd install MSM_HOCR v3 binary
+ENV MSMBINDIR=${HCPPIPEDIR}/MSMBinaries
 
-# Copy MSM_HOCR_v2 binary
-# Skip this for now pending license questions
-#COPY MSM/Centos/msm ${MSMBin}/msm
+RUN mkdir -p ${MSMBINDIR} && \
+    wget -nv https://github.com/ecr05/MSM_HOCR_macOSX/releases/download/1.0/msm_ubuntu14.04 -O ${MSMBINDIR}/msm && \
+    chmod +x ${MSMBINDIR}/msm
+
 #############################################
 
 # Make directory for flywheel spec (v0)
