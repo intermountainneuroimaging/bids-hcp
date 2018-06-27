@@ -21,23 +21,34 @@ source ${FLYWHEEL_BASE}/docker-env.sh
 source ${SCRIPT_DIR}/bash_functions.sh # some useful tools
 
 ##############################################################################
-# Parse configuration options
+# Parse configuration
 
-# If config.json exists, then we parse config file and cast vals to ENV Vars
-# (Flywheel gear run). Otherwise we parse manifest.json and cast the values to
-# ENV Vars from manifest (Docker run) Note value.default is used to grab the
-# configured defaults.
+# If the config file does not exist (i.e., local run) then parse the config
+# options and values from the manifest. Those variables can be found in the
+# manifest.json file within the `config` map.
 
-if [[ -f $CONFIG_FILE ]]; then
-  eval $(jq -r '.config | to_entries[] | "FW_CONFIG_\(.key)=\(.value)"' $CONFIG_FILE)
-  eval $(jq -r '.inputs | to_entries[] | "FW_INPUT_\(.key)=\(.value.location.path)"' $CONFIG_FILE)
-else
-  CONFIG_FILE=$FLYWHEEL_BASE/manifest.json
-  eval $(jq -r '.config | to_entries[] | "FW_CONFIG_\(.key)=\(.value.default)"' $CONFIG_FILE)
-fi
+function parse_config {
+  CONFIG_FILE=$FLYWHEEL_BASE/config.json
+  MANIFEST_FILE=$FLYWHEEL_BASE/manifest.json
+
+  if [[ -f $CONFIG_FILE ]]; then
+    echo -e "$(cat $CONFIG_FILE | jq -r '.config.'$1)"
+  else
+    CONFIG_FILE=$MANIFEST_FILE
+    echo -e "$(cat $MANIFEST_FILE | jq -r '.config.'$1'.default')"
+  fi
+}
+
+FW_CONFIG_Subject="$(parse_config 'Subject')"
+FW_CONFIG_RegName="$(parse_config 'RegName')"
+FW_CONFIG_BrainSize="$(parse_config 'BrainSize')"
+FW_CONFIG_TemplateSize="$(parse_config 'TemplateSize')"
+FW_CONFIG_StructuralUnwarpDirection="$(parse_config 'StructuralUnwarpDirection')"
+
 
 ##############################################################################
 # use "echo" for testing arguments without running scripts
+
 RUN_PRE=""
 RUN_FS=""
 RUN_POST=""
@@ -64,7 +75,7 @@ StructuralUnwarpDir="z" #z appears to be best or "NONE" if not used
 StructuralDeltaTE="NONE" #DeltaTE for GRE fieldmap used to correct STRUCTURAL
 StructuralDwellTime="NONE" # DwellTime for SpinEchoFieldMap when TOPUP is used for STRUCTURAL (ie: not T1wSampleSpacing)
 
-AvgrdcSTRING="NONE" # = Distortion correction for Structural pipeline (NONE, FIELDMAP==SiemensFieldMap, GeneralElectricFieldMap, TOPUP) 
+AvgrdcSTRING="NONE" # = Distortion correction for Structural pipeline (NONE, FIELDMAP==SiemensFieldMap, GeneralElectricFieldMap, TOPUP)
 # --> TOPUP requires SpinEchoPhaseEncodeNegative, SpinEchoPhaseEncodePositive
 # --> SiemensFieldMap requires MagnitudeInputName, PhaseInputName
 # --> GeneralElectricFieldMap requires GEB0InputName
@@ -77,7 +88,7 @@ PhaseInputName="NONE"
 UnwarpDir="NONE"
 SEUnwarpDir="NONE"
 
-GradientDistortionCoeffs="NONE" #no gradient correction unless we are provided with a .grad file 
+GradientDistortionCoeffs="NONE" #no gradient correction unless we are provided with a .grad file
 
 #######################################
 # Process inputs and config options from app
@@ -113,14 +124,14 @@ if [[ -e "${FW_INPUT_SiemensGREPhase}" ]] && [[ -e "${FW_INPUT_SiemensGREMagnitu
   MagnitudeInputName="${FW_INPUT_SiemensGREMagnitude}"
   PhaseInputName="${FW_INPUT_SiemensGREPhase}"
   AvgrdcSTRING="SiemensFieldMap"
-  
+
   #Ideally, FieldMap_Phase .json would contain EchoTime1 and EchoTime2
   #echotime1=$(jq -r '.inputs["SiemensGREPhase"].object.info.EchoTime1 // empty' ${CONFIG_FILE})
   #echotime2=$(jq -r '.inputs["SiemensGREPhase"].object.info.EchoTime2 // empty' ${CONFIG_FILE})
-  
+
   echotime1=$(jq -r '.inputs["SiemensGREMagnitude"].object.info.EchoTime // empty' ${CONFIG_FILE})
   echotime2=$(jq -r '.inputs["SiemensGREPhase"].object.info.EchoTime // empty' ${CONFIG_FILE})
-  
+
   if [[ -z "$echotime1" ]] || [[ -z "$echotime2" ]]; then
     echo -e "${CONTAINER} [$(timestamp)] No EchoTime metadata found in FieldMap input file!  Exiting."
     exit 1
@@ -128,11 +139,11 @@ if [[ -e "${FW_INPUT_SiemensGREPhase}" ]] && [[ -e "${FW_INPUT_SiemensGREMagnitu
     echo -e "${CONTAINER} [$(timestamp)] EchoTime1 and EchoTime2 are the same (Please ensure Magnitude input is TE1)! Exiting."
     exit 1
   fi
-  
+
   echotime1=$(print_decimal_number $echotime1)
   echotime2=$(print_decimal_number $echotime2)
   StructuralDeltaTE=$(echo "($echotime2 - $echotime1)*1000.0" | bc -l)
-  
+
 # For SpinEcho "TOPUP" FieldMap, must include both Pos and Neg phase encode
 elif [[ -e "${FW_INPUT_SpinEchoNegative}" ]] && [[ -e "${FW_INPUT_SpinEchoPositive}" ]]; then
   SpinEchoPhase1="${FW_INPUT_SpinEchoPositive}"
@@ -142,7 +153,7 @@ elif [[ -e "${FW_INPUT_SpinEchoNegative}" ]] && [[ -e "${FW_INPUT_SpinEchoPositi
   pedirSE2=$(jq -r '.inputs["SpinEchoNegative"].object.info.PhaseEncodingDirection // empty' ${CONFIG_FILE})
   pedirSE1=$( echo "$pedirSE1" | tr "[ijk]" "[xyz]" )
   pedirSE2=$( echo "$pedirSE2" | tr "[ijk]" "[xyz]" )
-  
+
   if [[ -z "${pedirSE1}" ]]; then
     echo -e "${CONTAINER} [$(timestamp)] SpinEchoPositive input is missing PhaseEncodingDirection metadata!"
     exit 1
@@ -153,7 +164,7 @@ elif [[ -e "${FW_INPUT_SpinEchoNegative}" ]] && [[ -e "${FW_INPUT_SpinEchoPositi
     echo -e "${CONTAINER} [$(timestamp)] SpinEchoPositive and SpinEchoNegative have the same PhaseEncodingDirection (${pedirSE1})!"
     exit 1
   fi
-  
+
   if [[ "${pedirSE1},${pedirSE2}" == "x,x-" ]] || [[ "${pedirSE1},${pedirSE2}" == "y,y-" ]]; then
     SpinEchoPhaseEncodePositive="${SpinEchoPhase1}"
     SpinEchoPhaseEncodeNegative="${SpinEchoPhase2}"
@@ -165,18 +176,18 @@ elif [[ -e "${FW_INPUT_SpinEchoNegative}" ]] && [[ -e "${FW_INPUT_SpinEchoPositi
     echo -e "${CONTAINER} [$(timestamp)] Unrecognized SpinEcho phase-encoding directions (${pedirSE1},${pedirSE2})!"
     exit 1
   fi
-  
+
   StructuralDwellTime=$(print_decimal_number $(jq -r '.inputs["SpinEchoPositive"].object.info.EffectiveEchoSpacing // empty' ${CONFIG_FILE}))
   TopupDwellTime=$(print_decimal_number $(jq -r '.inputs["SpinEchoPositive"].object.info.EffectiveEchoSpacing // empty' ${CONFIG_FILE}))
   pedirSE_plane=$( echo "${pedirSE1}" | sed -E 's/[-+]//g' )
   SEUnwarpDir=${pedirSE_plane}
   AvgrdcSTRING="TOPUP"
-  
+
 elif [[ -e "${FW_INPUT_GeneralElectricFieldMap}" ]]; then
   #TODO: how do we handle GE fieldmap? where do we get deltaTE?
   echo -e "${CONTAINER} [$(timestamp)] Cannot currently handle GeneralElectricFieldmap!"
   exit 1
-  
+
   #GEB0InputName="${FW_INPUT_GeneralElectricFieldMap}"
   #AvgrdcSTRING="GeneralElectricFieldMap"
 fi
@@ -405,7 +416,7 @@ fi
 # - For now, don't copy full input json since it might contain identifiers from DICOM etc
 # - add/update .config.RegName since it might not have been included in config (pre-MSM availability)
 # - add/update .config.Subject since it might later be pulled from other session metadata
-# - This jq call does the value replacement, then selects just .config but stores it back into a 
+# - This jq call does the value replacement, then selects just .config but stores it back into a
 #    new element called ".config" so the new file can be read as though it was flywheel config.json
 OUTPUT_CONFIG_FILE=${StudyFolder}/${Subject}/${Subject}_hcpstruct_config.json
 jq -r '.config.RegName = "'"${RegName}"'" | .config.Subject = "'"${Subject}"'" | .config | {config: .}' $CONFIG_FILE \
@@ -415,7 +426,7 @@ jq -r '.config.RegName = "'"${RegName}"'" | .config.Subject = "'"${Subject}"'" |
   | jq -r '.config.LowResMesh = "'"${LowResMesh}"'"' > ${OUTPUT_CONFIG_FILE}
 
 # If pipeline successful, zip outputs and clean up
-outputzipname=${Subject}_hcpstruct.zip 
+outputzipname=${Subject}_hcpstruct.zip
 echo -e "${CONTAINER} [$(timestamp)] Zipping output file ${outputzipname}"
 cd ${StudyFolder}
 rm -f ${OUTPUT_DIR}/${outputzipname}
