@@ -30,7 +30,7 @@ source ${SCRIPT_DIR}/bash_functions.sh # some useful tools
 
 if [[ -f $CONFIG_FILE ]]; then
   eval $(jq -r '.inputs | to_entries[] | "FW_INPUT_\(.key)=\(.value.location.path)"' $CONFIG_FILE)
-  echo "$(env | grep INPUT)"
+  echo "$(set | grep INPUT)"
 fi
 
 
