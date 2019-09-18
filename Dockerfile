@@ -5,7 +5,7 @@
 # Use Ubuntu 14.04 LTS
 FROM flywheel/fsl-base:5.0.9_trusty
 
-MAINTAINER Flywheel <support@flywheel.io>
+LABEL maintainer="Flywheel <support@flywheel.io>"
 
 #############################################
 # FSL 5.0.9 is a part of the base image.  Update the environment variables
@@ -22,12 +22,15 @@ ENV FSLTCLSH=/usr/bin/tclsh
 ENV FSLWISH=/usr/bin/wish
 
 #############################################
-# Download and install Connectome Workbench
-RUN apt-get update && \
-    apt-get -y install connectome-workbench=1.2.3-1~nd14.04+1 && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+# Download and install Connectome Workbench 1.3.2 
+# Compatible with HCP v4.0.0
+RUN cd /opt/ && \
+    wget https://www.humanconnectome.org/storage/app/media/workbench/workbench-linux64-v1.3.2.zip -O workbench.zip && \
+    unzip workbench.zip && \
+    rm workbench.zip && \
+    cd /
 
-ENV CARET7DIR=/usr/bin
+ENV CARET7DIR=/opt/workbench/bin_linux64
 
 #############################################
 # Download and install HCP Pipelines
@@ -43,7 +46,6 @@ RUN wget -nv https://github.com/Washington-University/HCPpipelines/archive/v4.0.
 # Set up specific environment variables for the HCP Pipeline
 ENV FSL_DIR="${FSLDIR}"
 ENV HCPPIPEDIR=/opt/HCP-Pipelines
-ENV CARET7DIR=/usr/bin
 ENV MSMBINDIR=${HCPPIPEDIR}/MSMBinaries
 ENV MSMCONFIGDIR=${HCPPIPEDIR}/MSMConfig
 #ENV MATLAB_COMPILER_RUNTIME=/media/myelin/brainmappers/HardDrives/1TB/MATLAB_Runtime/v901
@@ -147,6 +149,7 @@ WORKDIR ${FLYWHEEL}
 # Install gear dependencies
 COPY requirements.txt ${FLYWHEEL}/requirements.txt
 RUN apt-get install -y --no-install-recommends \
+    gawk \
     python3-pip \
     zip \
     unzip \
@@ -163,8 +166,8 @@ COPY utils ${FLYWHEEL}/utils
 COPY manifest.json ${FLYWHEEL}/manifest.json
 
 # Copy additional scripts and scenes
-COPY scripts/*.sh scripts/*.bat /tmp/scripts/
-COPY scenes/TEMPLATE*.scene /tmp/scenes/
+COPY scripts /tmp/scripts
+COPY scenes /tmp/scenes
 
 # ENV preservation for Flywheel Engine
 RUN python -c 'import os, json; f = open("/tmp/gear_environ.json", "w"); json.dump(dict(os.environ), f)'
