@@ -1,2 +1,7 @@
 ignore*
 MSM*
+*.pyc
+__pycache__
+.DS_Store
+utils/.DS_Store
+utils/args/.DS_Store
