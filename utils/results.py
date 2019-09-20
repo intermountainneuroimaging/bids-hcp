@@ -97,8 +97,9 @@ def cleanup(context):
     # Write Metadata to file
     if 'metadata' in context.custom_dict.keys():
         info = context.custom_dict['metadata']['analysis']['info']
-        context.log.info(info) # TODO: Remove
-        context.log.info(context.custom_dict['metadata']) # TODO: Remove
+        # TODO: Remove the below debugging section!!!
+        context.log.info(info) 
+        context.log.info(context.custom_dict['metadata']) 
         context.update_container_metadata('session',info = info)
         context.write_metadata()
         if op.exists(op.join(context.output_dir,'.metadata.json')):
@@ -112,6 +113,7 @@ def cleanup(context):
             )
         else:
             context.log.warning('Could not find .metadata.json!!!')
+        # TODO: Remove the above debugging section!!!
     # List final directory to log
     context.log.info('Final output directory listing: \n')
     os.chdir(context.output_dir)
