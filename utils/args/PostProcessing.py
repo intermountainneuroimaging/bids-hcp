@@ -1,6 +1,6 @@
 """
-This module elevates "whitelisted" FreeSurfer output to the toplevel output of 
-this gear's output.  This is as specified in 
+This module elevates "whitelisted" files to the toplevel of this gear's output
+directory.  This is as specified in 
 https://github.com/scitran-apps/freesurfer-recon-all/blob/master/bin/run#L206-L317.
 However, what is requested in the volume and area information of the FS output
 rather than the registered and segmented volumes and surfaces (L296-L317).
@@ -24,7 +24,7 @@ def set_metadata_from_csv(context,csv_file):
         columns = df.columns
         # First column is the name of the csv
         # To avoid name collisions, organize these by seg_title
-        seg_title = columns[0]
+        seg_title = columns[0].replace('.','_')
         info[seg_title] = {}
         # All but the first column which is subject_id
         for col in columns[1:]:
@@ -40,6 +40,8 @@ def process_aseg_csv(context):
 
     if not 'info' in metadata['analysis'].keys():
         metadata['analysis']['info'] = {}
+        ### TODO: Remove this on successful testing
+        metadata['analysis']['info']['TestKey'] = 'Test Value'
 
     tablefile = \
         op.join(

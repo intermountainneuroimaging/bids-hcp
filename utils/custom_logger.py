@@ -5,12 +5,12 @@ import time
 def log_config(context):
     config = context.config
     inputs = context._invocation['inputs']
-    context.log.info('\n\nThe following inputs were used:')
+    context.log.info('\n\nThe following inputs are used:')
     for fl in inputs.keys():
         context.log.info(
             '{}: {}'.format(fl,context.get_input_path(fl))
         )
-    context.log.info('\n\nThe following configuration were set:')
+    context.log.info('\n\nThe following configuration parameters are set:')
     for k in config.keys():
         context.log.info(
             '{}: {}'.format(k,context.config[k])

@@ -29,8 +29,8 @@ def save_hcpstruct_config(context):
 
 def preserve_whitelist_files(context):
     for fl in context.custom_dict['whitelist']:
-        context.log.info('Copying file to output: {}'.format(fl))
         if not context.custom_dict['dry-run']:
+            context.log.info('Copying file to output: {}'.format(fl))
             shutil.copy(fl,context.output_dir)
             
 
@@ -96,11 +96,22 @@ def cleanup(context):
     preserve_whitelist_files(context)
     # Write Metadata to file
     if 'metadata' in context.custom_dict.keys():
-        with open(
-            op.join(context.output_dir, '.metadata.json'), 'w'
-        ) as metafile:
-            json.dump(context.custom_dict['metadata'], metafile)
-    
+        info = context.custom_dict['metadata']['analysis']['info']
+        context.log.info(info) # TODO: Remove
+        context.log.info(context.custom_dict['metadata']) # TODO: Remove
+        context.update_container_metadata('session',info = info)
+        context.write_metadata()
+        if op.exists(op.join(context.output_dir,'.metadata.json')):
+            context.log.info(
+             '{} exists'.format(op.join(context.output_dir,'.metadata.json'))
+            )
+            context.log.info(open(op.join(context.output_dir,'.metadata.json'),'r').read())
+        elif op.exists(op.join(context.work_dir,'.metadata.json')):
+            context.log.info(
+                '{} exists'.format(op.join(context.work_dir,'.metadata.json'))
+            )
+        else:
+            context.log.warning('Could not find .metadata.json!!!')
     # List final directory to log
     context.log.info('Final output directory listing: \n')
     os.chdir(context.output_dir)

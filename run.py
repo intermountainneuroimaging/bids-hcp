@@ -10,13 +10,23 @@ from utils.custom_logger import get_custom_logger, log_config
 from utils.args import PreFreeSurfer, FreeSurfer, PostFreeSurfer
 from utils.args import hcpstruct_qc_scenes, hcpstruct_qc_mosaic
 from utils.args import PostProcessing
-from utils import results
+from utils import results, validate_config
 
 if __name__ == '__main__':
     # Get the Gear Context
     context = flywheel.GearContext()
     # Activate custom logger
     context.log = get_custom_logger('[flywheel/hcp-struct]')
+
+    # Validate gear configuration against gear manifest
+    try:
+        validate_config.validate_config_against_manifest(context)
+    except Exception as e:
+        context.log.fatal(e,)
+        context.log.fatal(
+            'Please make the prescribed corrections and try again.'
+        )
+        os.sys.exit(1)
     # Set up Custom Dicionary to host user variables
     context.custom_dict={}
     context.custom_dict['SCRIPT_DIR']    = '/tmp/scripts'
@@ -30,7 +40,7 @@ if __name__ == '__main__':
 
     context.custom_dict['environ'] = environ
     # Create a 'dry run' flag for debugging
-    context.custom_dict['dry-run'] = False
+    context.custom_dict['dry-run'] = True
      
     ###########################################################################
     # Pipelines common commands
