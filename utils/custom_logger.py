@@ -6,14 +6,17 @@ def log_config(context):
     config = context.config
     inputs = context._invocation['inputs']
     context.log.info('\n\nThe following inputs are used:')
-    for fl in inputs.keys():
-        context.log.info(
-            '{}: {}'.format(fl,context.get_input_path(fl))
-        )
+    for key in inputs.keys():
+        if key == 'api-key':
+            context.log.info('{}: *********'.format(key))
+        else:
+            context.log.info(
+                '{}: {}'.format(key,context.get_input_path(key))
+            )
     context.log.info('\n\nThe following configuration parameters are set:')
-    for k in config.keys():
+    for key in config.keys():
         context.log.info(
-            '{}: {}'.format(k,context.config[k])
+            '{}: {}'.format(key,context.config[key])
         )
     context.log.info('\n')
 

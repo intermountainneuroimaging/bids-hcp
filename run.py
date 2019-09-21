@@ -40,7 +40,7 @@ if __name__ == '__main__':
 
     context.custom_dict['environ'] = environ
     # Create a 'dry run' flag for debugging
-    context.custom_dict['dry-run'] = True
+    context.custom_dict['dry-run'] = False
      
     ###########################################################################
     # Pipelines common commands

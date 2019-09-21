@@ -33,7 +33,6 @@ def preserve_whitelist_files(context):
             context.log.info('Copying file to output: {}'.format(fl))
             shutil.copy(fl,context.output_dir)
             
-
 def zip_hcpstruct_output(context):
     environ = context.custom_dict['environ']
     outputzipname=context.config['Subject']+'_hcpstruct.zip'
@@ -95,25 +94,16 @@ def cleanup(context):
     zip_pipeline_logs(context)
     preserve_whitelist_files(context)
     # Write Metadata to file
-    if 'metadata' in context.custom_dict.keys():
+    if 'analysis' in context.custom_dict['metadata'].keys():
         info = context.custom_dict['metadata']['analysis']['info']
-        # TODO: Remove the below debugging section!!!
-        context.log.info(info) 
-        context.log.info(context.custom_dict['metadata']) 
-        context.update_container_metadata('session',info = info)
-        context.write_metadata()
-        if op.exists(op.join(context.output_dir,'.metadata.json')):
-            context.log.info(
-             '{} exists'.format(op.join(context.output_dir,'.metadata.json'))
-            )
-            context.log.info(open(op.join(context.output_dir,'.metadata.json'),'r').read())
-        elif op.exists(op.join(context.work_dir,'.metadata.json')):
-            context.log.info(
-                '{} exists'.format(op.join(context.work_dir,'.metadata.json'))
-            )
-        else:
-            context.log.warning('Could not find .metadata.json!!!')
-        # TODO: Remove the above debugging section!!!
+        ## TODO: The below is a work around until we get the .metadata.json 
+        ## file functionality working
+        # Initialize the flywheel client
+        fw = context.client
+        analysis_id = context.destination['id']
+        # Update metadata
+        analysis_object = fw.get(analysis_id)
+        analysis_object.update_info(info)
     # List final directory to log
     context.log.info('Final output directory listing: \n')
     os.chdir(context.output_dir)

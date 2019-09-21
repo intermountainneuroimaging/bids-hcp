@@ -40,8 +40,6 @@ def process_aseg_csv(context):
 
     if not 'info' in metadata['analysis'].keys():
         metadata['analysis']['info'] = {}
-        ### TODO: Remove this on successful testing
-        metadata['analysis']['info']['TestKey'] = 'Test Value'
 
     tablefile = \
         op.join(
