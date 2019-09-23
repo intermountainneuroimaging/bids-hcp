@@ -2,7 +2,6 @@ import os, os.path as op
 import json
 import subprocess as sp
 import shutil
-import pandas as pd
 
 def save_hcpstruct_config(context):
     # Add current gear config.json to output for reference in subsequent gears
