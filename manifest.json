@@ -105,6 +105,7 @@
     },
     "RegName": {
       "type": "string",
+      "enum":["MSMSulc","FS"],
       "default": "MSMSulc",
       "description": "Surface registration type: either 'FS' (freesurfer) or 'MSMSulc' (HCP default)"
     },
@@ -121,7 +122,8 @@
     "StructuralUnwarpDirection": {
       "description": "Readout direction for structural scans ( 'x', 'x-', 'y', 'y-', 'z', 'z-' ). HCP default = 'z'",
       "default": "z",
-      "type": "string"
+      "type": "string",
+      "enum": ["x", "x-", "y", "y-", "z", "z-"]
     },
     "aseg_csv": {
         "type":"boolean",
