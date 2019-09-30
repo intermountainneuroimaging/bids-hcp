@@ -100,8 +100,8 @@
     },
     "Subject": {
       "type": "string",
-      "default": "000000",
-      "description": "Subject ID (Default = 000000)"
+      "description": "Subject ID (use to override session subject id)",
+      "optional": true
     },
     "RegName": {
       "type": "string",

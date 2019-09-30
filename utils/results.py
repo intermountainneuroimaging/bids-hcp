@@ -95,14 +95,16 @@ def cleanup(context):
     # Write Metadata to file
     if 'analysis' in context.custom_dict['metadata'].keys():
         info = context.custom_dict['metadata']['analysis']['info']
-        ## TODO: The below is a work around until we get the .metadata.json 
-        ## file functionality working
-        # Initialize the flywheel client
-        fw = context.client
-        analysis_id = context.destination['id']
-        # Update metadata
-        analysis_object = fw.get(analysis_id)
-        analysis_object.update_info(info)
+        # if this metadata is not empty
+        if not context.custom_dict['dry-run']:
+            ## TODO: The below is a work around until we get the .metadata.json 
+            ## file functionality working
+            # Initialize the flywheel client
+            fw = context.client
+            analysis_id = context.destination['id']
+            # Update metadata
+            analysis_object = fw.get(analysis_id)
+            analysis_object.update_info(info)
     # List final directory to log
     context.log.info('Final output directory listing: \n')
     os.chdir(context.output_dir)

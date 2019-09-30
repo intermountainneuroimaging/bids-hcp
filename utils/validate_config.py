@@ -16,37 +16,48 @@ def validate_config_against_manifest(context):
     errors = []
     if 'config' in manifest.keys():
         for key in m_config.keys():
-            c_val = c_config[key]
             m_item = m_config[key]
-            if 'maximum' in m_item.keys():
-                if c_val > m_item['maximum']:
+            # Check if config value is optional
+            if key not in c_config.keys():
+                if 'optional' not in m_item.keys():
                     errors.append(
-                        'The value of {}, {}, exceeds '.format(key,c_val) + \
-                        'the maximum of {}.'.format(m_item['maximum'])
+                        'The config parameter, {}, is not optional.'.format(key)
                     )
-            if 'minimum' in m_item.keys():
-                if c_val < m_item['minimum']:
+                elif not m_item['optional']:
                     errors.append(
-                        'The value of {}, {}, is less than '.format(key,c_val) + \
-                        'the minimum of {}.'.format(m_item['minimum'])
+                        'The config parameter, {}, is not optional.'.format(key)
                     )
-            if 'items' in m_item.keys():
-                if 'maxItems' in m_item['items'].keys():
-                    maxItems = m_item['items']['maxItems']
-                    if len (c_val) > maxItems:
+            else:
+                c_val = c_config[key]
+                if 'maximum' in m_item.keys():
+                    if c_val > m_item['maximum']:
                         errors.append(
-                            'The array {} has {} '.format(key,len(c_val)) + \
-                            'elements. More than the {} '.format(maxItems) + \
-                            'required.'
+                            'The value of {}, {}, exceeds '.format(key,c_val) + \
+                            'the maximum of {}.'.format(m_item['maximum'])
                         )
-                if 'minItems' in m_item['items'].keys():
-                    minItems = m_item['items']['minItems']
-                    if len (c_val) > minItems:
+                if 'minimum' in m_item.keys():
+                    if c_val < m_item['minimum']:
                         errors.append(
-                            'The array {} has {} '.format(key,len(c_val)) + \
-                            'elements. Less than the {} '.format(minItems) + \
-                            'required.'
+                            'The value of {}, {}, is less than '.format(key,c_val) + \
+                            'the minimum of {}.'.format(m_item['minimum'])
                         )
+                if 'items' in m_item.keys():
+                    if 'maxItems' in m_item['items'].keys():
+                        maxItems = m_item['items']['maxItems']
+                        if len (c_val) > maxItems:
+                            errors.append(
+                                'The array {} has {} '.format(key,len(c_val)) + \
+                                'elements. More than the {} '.format(maxItems) + \
+                                'required.'
+                            )
+                    if 'minItems' in m_item['items'].keys():
+                        minItems = m_item['items']['minItems']
+                        if len (c_val) > minItems:
+                            errors.append(
+                                'The array {} has {} '.format(key,len(c_val)) + \
+                                'elements. Less than the {} '.format(minItems) + \
+                                'required.'
+                            )
     if 'inputs' in manifest.keys():
         c_inputs = context._invocation['inputs']
         m_inputs = manifest['inputs']

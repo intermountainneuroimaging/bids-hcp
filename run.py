@@ -6,6 +6,7 @@ import copy
 import shutil
 
 import flywheel
+from utils.args.Common import set_subject
 from utils.custom_logger import get_custom_logger, log_config
 from utils.args import PreFreeSurfer, FreeSurfer, PostFreeSurfer
 from utils.args import hcpstruct_qc_scenes, hcpstruct_qc_mosaic
@@ -31,6 +32,7 @@ if __name__ == '__main__':
     context.custom_dict={}
     context.custom_dict['SCRIPT_DIR']    = '/tmp/scripts'
     context.custom_dict['SCENE_DIR']     = '/tmp/scenes'
+    # Can I automate this? Do I want to?
     context.custom_dict['FreeSurfer_Version'] = '5.3.0'
     # Instantiate Environment Variables
     # This will always be '/tmp/gear_environ.json' with these 
@@ -40,7 +42,7 @@ if __name__ == '__main__':
 
     context.custom_dict['environ'] = environ
     # Create a 'dry run' flag for debugging
-    context.custom_dict['dry-run'] = False
+    context.custom_dict['dry-run'] = True
      
     ###########################################################################
     # Pipelines common commands
@@ -60,6 +62,16 @@ if __name__ == '__main__':
     # attempting to execute. Correct parameters or gracefully recover where
     # possible.
     ###########################################################################
+    # Ensure the subject_id is set in a valid manner (api or config)
+    try:
+        set_subject(context)
+    except Exception as e:
+        context.log.fatal(e,)
+        context.log.fatal(
+            'The Subject ID is not valid. Examine and try again.',
+        )
+        os.sys.exit(1)
+        
     # Report on Inputs and configuration parameters to the log
     log_config(context)
     # Build and Validate Parameters for the PreFreeSurferPipeline.sh 
