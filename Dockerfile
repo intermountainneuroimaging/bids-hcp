@@ -120,9 +120,9 @@ ENV PATH /opt/freesurfer/bin:/opt/freesurfer/fsfast/bin:/opt/freesurfer/tktools:
 RUN apt-get -y update \
     && apt-get install -y --no-install-recommends \ 
     python-dev \
-     python-numpy \
-     python-scipy \
-     python-nibabel && \
+    python-numpy \
+    python-scipy \
+    python-nibabel && \
     wget -nv https://github.com/Washington-University/gradunwarp/archive/v1.0.3.tar.gz -O gradunwarp.tar.gz && \
     cd /opt/ && \
     tar zxvf /gradunwarp.tar.gz && \
