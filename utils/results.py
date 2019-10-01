@@ -76,6 +76,21 @@ def zip_pipeline_logs(context):
                     universal_newlines=True, env=environ)
         # Wait for Popen call to finish
         p.communicate()
+        
+def export_metadata(context):
+    # Write Metadata to Analysis Object
+    if 'analysis' in context.custom_dict['metadata'].keys():
+        info = context.custom_dict['metadata']['analysis']['info']
+        # if this metadata is not empty
+        if len(info.keys())>0:
+            ## TODO: The below is a work around until we get the .metadata.json 
+            ## file functionality working
+            # Initialize the flywheel client
+            fw = context.client
+            analysis_id = context.destination['id']
+            # Update metadata
+            analysis_object = fw.get(analysis_id)
+            analysis_object.update_info(info)
 
 def cleanup(context):
     # Move all images to output directory
@@ -92,23 +107,12 @@ def cleanup(context):
     zip_hcpstruct_output(context)
     zip_pipeline_logs(context)
     preserve_whitelist_files(context)
-    # Write Metadata to file
-    if 'analysis' in context.custom_dict['metadata'].keys():
-        info = context.custom_dict['metadata']['analysis']['info']
-        # if this metadata is not empty
-        if not context.custom_dict['dry-run']:
-            ## TODO: The below is a work around until we get the .metadata.json 
-            ## file functionality working
-            # Initialize the flywheel client
-            fw = context.client
-            analysis_id = context.destination['id']
-            # Update metadata
-            analysis_object = fw.get(analysis_id)
-            analysis_object.update_info(info)
+    export_metadata(context)
+
     # List final directory to log
     context.log.info('Final output directory listing: \n')
     os.chdir(context.output_dir)
     duResults = sp.Popen('du -hs *',shell=True,stdout=sp.PIPE, stderr=sp.PIPE,
                 universal_newlines=True)
     stdout, _ = duResults.communicate()
-    context.log.info('\n' + stdout)           
+    context.log.info('\n' + stdout)

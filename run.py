@@ -42,7 +42,7 @@ if __name__ == '__main__':
 
     context.custom_dict['environ'] = environ
     # Create a 'dry run' flag for debugging
-    context.custom_dict['dry-run'] = True
+    context.custom_dict['dry-run'] = False
      
     ###########################################################################
     # Pipelines common commands
@@ -71,7 +71,7 @@ if __name__ == '__main__':
             'The Subject ID is not valid. Examine and try again.',
         )
         os.sys.exit(1)
-        
+
     # Report on Inputs and configuration parameters to the log
     log_config(context)
     # Build and Validate Parameters for the PreFreeSurferPipeline.sh 
