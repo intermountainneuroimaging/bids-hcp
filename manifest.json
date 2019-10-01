@@ -129,6 +129,11 @@
         "type":"boolean",
         "default": true,
         "description": "Write aseg stats to a csv file and analysis metadata."
+    },
+    "Dry-Run": {
+        "type":"boolean",
+        "default": false,
+        "description": "Log all commands, but do not execute."
     }
   },
   "command": "/flywheel/v0/run.py"
