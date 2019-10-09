@@ -36,7 +36,7 @@ def build(context):
                 'fmapmag','fmapphase',
                 'fmapgeneralelectric',
                 'SEPhaseNeg','SEPhasePos','seechospacing','seunwarpdir',
-                'echodifff','t1samplespacing','t2samplespacing',
+                'echodiff','t1samplespacing','t2samplespacing',
                 'gdcoeffs','avgrdcmethod','topupconfig'
                 ]
     # the parameter "--bfsigma" is not accounted for
@@ -44,9 +44,13 @@ def build(context):
         params[p] = "NONE"
 
     if "DwellTime" in inputs["T1"]["object"]["info"].keys():
-        params['t1samplespacing'] = inputs["T1"]["object"]["info"]["DwellTime"]
+        dwell_time = inputs["T1"]["object"]["info"]["DwellTime"]
+        # format dwell_time to 15 places
+        params['t1samplespacing'] = format(dwell_time,'.15f')
     if "DwellTime" in inputs["T2"]["object"]["info"].keys():
-        params['t2samplespacing'] = inputs["T2"]["object"]["info"]["DwellTime"]
+        dwell_time = inputs["T2"]["object"]["info"]["DwellTime"]
+        # format dwell_time to 15 places
+        params['t2samplespacing'] = format(dwell_time,'.15f')
 
     # HCP PIPE DIR Templates
     # MNI0.7mm template
@@ -147,7 +151,7 @@ def build(context):
     if 'GradientCoeff' in inputs.keys():
         params['gdcoeffs'] = context.get_input_path('GradientCoeff')
 
-    params['printcom'] = "\"\""
+    params['printcom'] = ""
     context.custom_dict['PRE-params'] = params
 
 def validate(context):

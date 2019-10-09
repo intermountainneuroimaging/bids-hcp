@@ -11,7 +11,7 @@ from utils.custom_logger import get_custom_logger, log_config
 from utils.args import PreFreeSurfer, FreeSurfer, PostFreeSurfer
 from utils.args import hcpstruct_qc_scenes, hcpstruct_qc_mosaic
 from utils.args import PostProcessing
-from utils import results, validate_config
+from utils import results, gear_preliminaries
 
 if __name__ == '__main__':
     # Get the Gear Context
@@ -21,7 +21,7 @@ if __name__ == '__main__':
 
     # Validate gear configuration against gear manifest
     try:
-        validate_config.validate_config_against_manifest(context)
+        gear_preliminaries.validate_config_against_manifest(context)
     except Exception as e:
         context.log.fatal(e,)
         context.log.fatal(

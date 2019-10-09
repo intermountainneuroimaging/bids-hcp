@@ -38,7 +38,7 @@ def build(context):
                                 'Conte69.MyelinMap_BC.164k_fs_LR.dscalar.nii')
     # Needs Checking for being FS or MSMSulc otherwise Error.
     params['regname'] = config['RegName']
-    params['printcom'] = "\"\""
+    params['printcom'] = ""
     # Unaccounted for parameters: 
     #  CorrectionSigma=`opts_GetOpt1 "--mcsigma" $@` DEFAULT: sqrt(200)
     #  InflateExtraScale=`opts_GetOpt1 "--inflatescale" $@`f DEFAULT: 1
