@@ -18,7 +18,7 @@ def build(context):
     # T2w FreeSurfer Input (Full Resolution)
     params['t2'] = op.join(context.work_dir, config['Subject'], 'T1w',
                            'T2w_acpc_dc_restore.nii.gz')
-    params['printcom'] = ""
+    params['printcom'] = " "
     context.custom_dict['FS-params'] = params
 
 def validate(context):

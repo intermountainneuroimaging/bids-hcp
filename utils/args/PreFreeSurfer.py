@@ -151,7 +151,7 @@ def build(context):
     if 'GradientCoeff' in inputs.keys():
         params['gdcoeffs'] = context.get_input_path('GradientCoeff')
 
-    params['printcom'] = ""
+    params['printcom'] = " "
     context.custom_dict['PRE-params'] = params
 
 def validate(context):
