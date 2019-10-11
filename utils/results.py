@@ -10,7 +10,8 @@ def save_hcpstruct_config(context):
     # - add/update .config.Subject since it might later be pulled from other session metadata
     # - This jq call does the value replacement, then selects just .config but stores it back into a
     #    new element called ".config" so the new file can be read as though it was flywheel config.json
-    hcpstruct_config={}
+    config = {}
+    hcpstruct_config={'config': config}
     for key in [
         'RegName',
         'Subject',
@@ -20,11 +21,11 @@ def save_hcpstruct_config(context):
         'LowResMesh'
     ]:
         if key in context.config.keys():
-            hcpstruct_config[key]=context.config[key]
+            config[key]=context.config[key]
 
     with open(op.join(context.work_dir,context.config['Subject'],
-            context.config['Subject']+'_hcpstruct_config.json'),'w') as f:
-        json.dump(hcpstruct_config,f)
+            context.config['Subject']+'_hcpstruct_config.json'), 'w') as f:
+        json.dump(hcpstruct_config, f, indent=4)
 
 def preserve_whitelist_files(context):
     for fl in context.custom_dict['whitelist']:
