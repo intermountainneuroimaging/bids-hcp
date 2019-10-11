@@ -29,9 +29,9 @@ def BuildCommandList(command, ParamList):
     return command
 
 def exec_command(context,command,shell=False,stdout_msg=None):
-    environ = context.custom_dict['environ']
+    environ = context.gear_dict['environ']
     context.log.info('Executing command: \n' + ' '.join(command)+'\n\n')
-    if not context.custom_dict['dry-run']:
+    if not context.gear_dict['dry-run']:
         # The 'shell' parameter is needed for bash output redirects 
         # (e.g. >,>>,&>)
         if shell:

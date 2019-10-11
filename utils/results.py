@@ -28,13 +28,13 @@ def save_hcpstruct_config(context):
         json.dump(hcpstruct_config, f, indent=4)
 
 def preserve_whitelist_files(context):
-    for fl in context.custom_dict['whitelist']:
-        if not context.custom_dict['dry-run']:
+    for fl in context.gear_dict['whitelist']:
+        if not context.gear_dict['dry-run']:
             context.log.info('Copying file to output: {}'.format(fl))
             shutil.copy(fl,context.output_dir)
             
 def zip_hcpstruct_output(context):
-    environ = context.custom_dict['environ']
+    environ = context.gear_dict['environ']
     outputzipname=context.config['Subject']+'_hcpstruct.zip'
     context.log.info('Zipping output file {}'.format(outputzipname))
     os.chdir(context.work_dir)
@@ -49,7 +49,7 @@ def zip_hcpstruct_output(context):
                op.join(context.output_dir,outputzipname+'.log')]
     command = ' '.join(command)
     context.log.info("The ZIP command is:\n"+command)
-    if not context.custom_dict['dry-run']:
+    if not context.gear_dict['dry-run']:
         p = sp.Popen(command, stdout=sp.PIPE, stderr=sp.PIPE, shell=True,
                     universal_newlines=True, env=environ)
         # Wait for Popen call to finish
@@ -57,7 +57,7 @@ def zip_hcpstruct_output(context):
 
 def zip_pipeline_logs(context):
     # zip pipeline logs
-    environ = context.custom_dict['environ']
+    environ = context.gear_dict['environ']
     logzipname='pipeline_logs.zip'
     context.log.info('Zipping pipeline logs to {}'.format(logzipname))
     os.chdir(context.work_dir)
@@ -72,7 +72,7 @@ def zip_pipeline_logs(context):
              op.join(context.output_dir,logzipname+'.log')]
     command = ' '.join(command)
     context.log.info("The ZIP command is:\n"+command)
-    if not context.custom_dict['dry-run']:         
+    if not context.gear_dict['dry-run']:         
         p = sp.Popen(command, stdout=sp.PIPE, stderr=sp.PIPE, shell=True,
                     universal_newlines=True, env=environ)
         # Wait for Popen call to finish
@@ -80,8 +80,8 @@ def zip_pipeline_logs(context):
         
 def export_metadata(context):
     # Write Metadata to Analysis Object
-    if 'analysis' in context.custom_dict['metadata'].keys():
-        info = context.custom_dict['metadata']['analysis']['info']
+    if 'analysis' in context.gear_dict['metadata'].keys():
+        info = context.gear_dict['metadata']['analysis']['info']
         # if this metadata is not empty
         if len(info.keys())>0:
             ## TODO: The below is a work around until we get the .metadata.json 

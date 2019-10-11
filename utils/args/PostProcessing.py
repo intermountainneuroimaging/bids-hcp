@@ -11,14 +11,14 @@ import pandas as pd
 from .Common import exec_command
 
 def build(context):
-    context.custom_dict['whitelist'] = []
-    context.custom_dict['metadata'] = {}
+    context.gear_dict['whitelist'] = []
+    context.gear_dict['metadata'] = {}
 
 def validate(context):
     pass
 
 def set_metadata_from_csv(context,csv_file):
-    info = context.custom_dict['metadata']['analysis']['info']
+    info = context.gear_dict['metadata']['analysis']['info']
     if op.exists(csv_file):
         df = pd.read_csv(csv_file,sep=',')
         columns = df.columns
@@ -31,10 +31,10 @@ def set_metadata_from_csv(context,csv_file):
             info[seg_title][col] = df[col][0]
 
 def process_aseg_csv(context):
-    whitelist = context.custom_dict['whitelist']
+    whitelist = context.gear_dict['whitelist']
     config = context.config
     # Check for the presence of keys.
-    metadata = context.custom_dict['metadata']
+    metadata = context.gear_dict['metadata']
     if not 'analysis' in metadata.keys():
         metadata['analysis'] = {}
 

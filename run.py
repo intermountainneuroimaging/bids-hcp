@@ -29,20 +29,20 @@ if __name__ == '__main__':
         )
         os.sys.exit(1)
     # Set up Custom Dicionary to host user variables
-    context.custom_dict={}
-    context.custom_dict['SCRIPT_DIR']    = '/tmp/scripts'
-    context.custom_dict['SCENE_DIR']     = '/tmp/scenes'
+    context.gear_dict={}
+    context.gear_dict['SCRIPT_DIR']    = '/tmp/scripts'
+    context.gear_dict['SCENE_DIR']     = '/tmp/scenes'
     # Can I automate this? Do I want to?
-    context.custom_dict['FreeSurfer_Version'] = '5.3.0'
+    context.gear_dict['FreeSurfer_Version'] = '5.3.0'
     # Instantiate Environment Variables
     # This will always be '/tmp/gear_environ.json' with these 
     # environments defined in the Dockerfile and exported from there.
     with open('/tmp/gear_environ.json', 'r') as f:
         environ = json.load(f)
 
-    context.custom_dict['environ'] = environ
+    context.gear_dict['environ'] = environ
     # Create a 'dry run' flag for debugging
-    context.custom_dict['dry-run'] = context.config['Dry-Run']
+    context.gear_dict['dry-run'] = context.config['Dry-Run']
      
     ###########################################################################
     # Pipelines common commands
@@ -54,7 +54,7 @@ if __name__ == '__main__':
     command_common=[op.join(environ['FSLDIR'],'bin','fsl_sub'),
                    QUEUE, FSLSUBOPTIONS]
     
-    context.custom_dict['command_common'] = command_common
+    context.gear_dict['command_common'] = command_common
 
     
     ###########################################################################

@@ -3,7 +3,7 @@ import subprocess as sp
 from collections import OrderedDict 
 
 def build(context):
-    environ = context.custom_dict['environ']
+    environ = context.gear_dict['environ']
     params = OrderedDict()
 
     params['qc_scene_root']=op.join(context.work_dir,context.config['Subject'])
@@ -17,19 +17,19 @@ def build(context):
                       context.config['Subject']+ \
                       '.hcpstruct_QC.')
 
-    context.custom_dict['params'] = params
+    context.gear_dict['params'] = params
 
 def execute(context):
-    environ = context.custom_dict['environ']
-    SCRIPT_DIR = context.custom_dict['SCRIPT_DIR']
+    environ = context.gear_dict['environ']
+    SCRIPT_DIR = context.gear_dict['SCRIPT_DIR']
     command = [op.join(SCRIPT_DIR,'hcpstruct_qc_mosaic.sh')]
-    for key in context.custom_dict['params'].keys():
-        command.append(context.custom_dict['params'][key])
+    for key in context.gear_dict['params'].keys():
+        command.append(context.gear_dict['params'][key])
     command.append('>>')
     command.append(op.join(context.work_dir,'logs','structuralqc.log'))
     context.log.info('HCP-Struct QC Mosaic command: \n' + ' '.join(command) + \
                      '\n\n')
-    if not context.custom_dict['dry-run']:
+    if not context.gear_dict['dry-run']:
         result = sp.Popen(command, stdout=sp.PIPE, stderr=sp.PIPE,
                         universal_newlines=True, env=environ)
         stdout, stderr = result.communicate()

@@ -19,10 +19,10 @@ def build(context):
     params['t2'] = op.join(context.work_dir, config['Subject'], 'T1w',
                            'T2w_acpc_dc_restore.nii.gz')
     params['printcom'] = " "
-    context.custom_dict['FS-params'] = params
+    context.gear_dict['FS-params'] = params
 
 def validate(context):
-    params = context.custom_dict['FS-params']
+    params = context.gear_dict['FS-params']
     # Make sure these exists where expected
     not_found = []
     for param in ['subjectDIR', 't1', 't1brain', 't2']:
@@ -30,14 +30,14 @@ def validate(context):
             raise Exception("FreeSurfer Parameter Building Failed.")
         if not op.exists(params[param]):
             not_found.append(params[param])
-    if (len(not_found) > 0) and (not context.custom_dict['dry-run']):
+    if (len(not_found) > 0) and (not context.gear_dict['dry-run']):
         raise Exception(
             "The following files where not found: " + ','.join(not_found))
 
 def execute(context):
-    environ = context.custom_dict['environ']
+    environ = context.gear_dict['environ']
     command = []
-    command.extend(context.custom_dict['command_common'])
+    command.extend(context.gear_dict['command_common'])
     # HCP v4.0.0 has FreeSurferPipeline scripts for both Freesurfer 5.3.0 and
     # Freesurfer 6.0.2
     # For FreeSurfer 5.3.0: FreeSurferPipeline-v5.3.0-HCP.sh
@@ -46,7 +46,7 @@ def execute(context):
         op.join(environ['HCPPIPEDIR'],'FreeSurfer',
         'FreeSurferPipeline-v5.3.0-HCP.sh')
         )
-    command = BuildCommandList(command,context.custom_dict['FS-params'])
+    command = BuildCommandList(command,context.gear_dict['FS-params'])
     stdout_msg = 'FreeSurfer logs (stdout, stderr) will be available in the ' + \
                  'file "pipeline_logs.zip" upon completion.'
 

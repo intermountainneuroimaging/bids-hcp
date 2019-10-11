@@ -7,7 +7,7 @@ from collections import OrderedDict
 from .Common import BuildCommandList, exec_command
 
 def build(context):
-    environ = context.custom_dict['environ']
+    environ = context.gear_dict['environ']
     config = context.config
     inputs = context._invocation['inputs']
 
@@ -92,7 +92,7 @@ def build(context):
         ):
             echotime1 = inputs["SiemensGREMagnitude"]['object']['info']['EchoTime']
             echotime2 = inputs["SiemensGREPhase"]['object']['info']['EchoTime']
-            params['echodiff'] = (echotime2 - echotime1) * 1000.0
+            params['echodiff'] = format((echotime2 - echotime1) * 1000.0, '.15f')
     # Else if TOPUP
     elif (
         ('SpinEchoNegative' in inputs.keys()) and
@@ -106,22 +106,19 @@ def build(context):
         if (
             'EffectiveEchoSpacing' in
             inputs["SpinEchoPositive"]['object']['info'].keys()
-        ):
-            params['seechospacing'] = \
-                inputs["SpinEchoPositive"]['object']['info']['EffectiveEchoSpacing']
+        ):  
+            SEP_object_info = inputs["SpinEchoPositive"]['object']['info']
+            SEN_object_info = inputs["SpinEchoNegative"]['object']['info']
+            seechospacing = SEP_object_info['EffectiveEchoSpacing']
+            params['seechospacing'] = format(seechospacing,'.15f')
+                
             if (
-                ('PhaseEncodingDirection' in
-                inputs["SpinEchoPositive"]['object']['info'].keys()
-                )
+                ('PhaseEncodingDirection' in SEP_object_info.keys())
                 and
-                ('PhaseEncodingDirection' in
-                inputs["SpinEchoNegative"]['object']['info'].keys()
-                )
+                ('PhaseEncodingDirection' in SEN_object_info.keys())
             ):
-                pedirSE1 = \
-                   inputs["SpinEchoPositive"]['object']['info']['PhaseEncodingDirection']
-                pedirSE2 = \
-                   inputs["SpinEchoNegative"]['object']['info']['PhaseEncodingDirection']
+                pedirSE1 = SEP_object_info['PhaseEncodingDirection']
+                pedirSE2 = SEN_object_info['PhaseEncodingDirection']
                 pedirSE1 = tr("ijk", "xyz", pedirSE1)
                 pedirSE2 = tr("ijk", "xyz", pedirSE2)
                 # Check SpinEcho phase-encoding directions
@@ -152,14 +149,14 @@ def build(context):
         params['gdcoeffs'] = context.get_input_path('GradientCoeff')
 
     params['printcom'] = " "
-    context.custom_dict['PRE-params'] = params
+    context.gear_dict['PRE-params'] = params
 
 def validate(context):
     """
     Ensure that the PreFreeSurfer Parameters are valid.
     Raise Exceptions and exit if not valid.
     """
-    params = context.custom_dict['PRE-params']
+    params = context.gear_dict['PRE-params']
     inputs = context._invocation['inputs']
     # Examining Brain Size
     if params['brainsize'] < 10:
@@ -227,16 +224,16 @@ def validate(context):
         raise Exception("Cannot currently handle GeneralElectricFieldmap!")
 
 def execute(context):
-    environ = context.custom_dict['environ']
+    environ = context.gear_dict['environ']
     config = context.config
     os.makedirs(context.work_dir+'/'+ config['Subject'], exist_ok=True)
     command = []
-    command.extend(context.custom_dict['command_common'])
+    command.extend(context.gear_dict['command_common'])
     command.append(
                op.join(environ['HCPPIPEDIR'],'PreFreeSurfer',
                'PreFreeSurferPipeline.sh')
                )
-    command = BuildCommandList(command,context.custom_dict['PRE-params'])
+    command = BuildCommandList(command,context.gear_dict['PRE-params'])
 
     stdout_msg = 'PreFreeSurfer logs (stdout, stderr) will be available ' + \
                  'in the file "pipeline_logs.zip" upon completion.'

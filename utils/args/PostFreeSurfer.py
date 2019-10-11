@@ -1,10 +1,11 @@
 import os, os.path as op
 import subprocess as sp
+from collections import OrderedDict
 from .Common import BuildCommandList, exec_command
 
 def build(context):
     config = context.config
-    environ = context.custom_dict['environ']
+    environ = context.gear_dict['environ']
     # Some options that may become user-specified in the future,
     # but use standard HCP values for now
     # Usually 2mm ("1.6" also available)
@@ -16,7 +17,7 @@ def build(context):
     # Basically always 164k vertices
     config['HighResMesh'] = "164"
 
-    params = {}
+    params = OrderedDict()
     params['path'] = context.work_dir
     params['subject'] = config['Subject']
     # (Need to rename make surf.gii and add 32k)
@@ -42,22 +43,22 @@ def build(context):
     # Unaccounted for parameters: 
     #  CorrectionSigma=`opts_GetOpt1 "--mcsigma" $@` DEFAULT: sqrt(200)
     #  InflateExtraScale=`opts_GetOpt1 "--inflatescale" $@`f DEFAULT: 1
-    context.custom_dict['POST-params']=params
+    context.gear_dict['POST-params']=params
 
 def validate(context):
-    params = context.custom_dict['POST-params']
+    params = context.gear_dict['POST-params']
     if not(params['regname'] in ['FS','MSMSulc']):
         raise Exception('RegName must be "FS" or "MSMSulc"!')
 
 def execute(context):
-    environ = context.custom_dict['environ']
+    environ = context.gear_dict['environ']
     command = []
-    command.extend(context.custom_dict['command_common'])
+    command.extend(context.gear_dict['command_common'])
     command.append(
         op.join(environ['HCPPIPEDIR'],'PostFreeSurfer',
         'PostFreeSurferPipeline.sh')
         )
-    command = BuildCommandList(command,context.custom_dict['POST-params'])
+    command = BuildCommandList(command,context.gear_dict['POST-params'])
 
     stdout_msg = 'PostFreeSurfer logs (stdout, stderr) will be available ' + \
                  'in the file "pipeline_logs.zip" upon completion.'
