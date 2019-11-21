@@ -11,7 +11,7 @@ from utils.args import PreFreeSurfer, FreeSurfer, PostFreeSurfer
 from utils.args import hcpstruct_qc_scenes, hcpstruct_qc_mosaic
 from utils.args import PostProcessing
 from utils import results, gear_preliminaries
-from utils.struct_utils import get_freesurfer_version
+from utils import struct_utils
 
 if __name__ == '__main__':
     # Preamble: take care of all gear-typical activities.
@@ -32,22 +32,9 @@ if __name__ == '__main__':
         os.sys.exit(1)
 
     # Can I automate this? Do I want to?
-    context.gear_dict['FreeSurfer_Version'] = get_freesurfer_version(context)
+    context.gear_dict['FreeSurfer_Version'] = \
+        struct_utils.get_freesurfer_version(context)
 
-     
-    ###########################################################################
-    # Pipelines common commands
-    # QUEUE works differently in FSL 6.0.1..we are not using it.
-    QUEUE = "-q "
-    LogFileDirFull = op.join(context.work_dir,'logs')
-    os.makedirs(LogFileDirFull, exist_ok=True)
-    FSLSUBOPTIONS = "-l "+ LogFileDirFull
-    environ = context.gear_dict['environ']
-    command_common=[op.join(environ['FSLDIR'],'bin','fsl_sub'), FSLSUBOPTIONS]
-    
-    context.gear_dict['command_common'] = command_common
-
-    
     ###########################################################################
     # Build and Validate parameters for all stages of the pipeline before
     # attempting to execute. Correct parameters or gracefully recover where
@@ -100,6 +87,22 @@ if __name__ == '__main__':
         )
         os.sys.exit(1)        
 
+    ###########################################################################
+    # Some hcp-func specific output parameters:
+    context.gear_dict['output_config'], \
+    context.gear_dict['output_config_filename'] = \
+            struct_utils.configs_to_export(context)    
+    # Pipelines common commands
+    # QUEUE works differently in FSL 6.0.1..we are not using it.
+    QUEUE = "-q "
+    LogFileDirFull = op.join(context.work_dir,'logs')
+    os.makedirs(LogFileDirFull, exist_ok=True)
+    FSLSUBOPTIONS = "-l "+ LogFileDirFull
+    environ = context.gear_dict['environ']
+    command_common=[op.join(environ['FSLDIR'],'bin','fsl_sub'), FSLSUBOPTIONS]
+    
+    context.gear_dict['command_common'] = command_common
+    
     ###########################################################################
     # Run PreFreeSurferPipeline.sh from subprocess.run
     try:
