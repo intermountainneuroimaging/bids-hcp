@@ -91,7 +91,12 @@ if __name__ == '__main__':
     # Some hcp-func specific output parameters:
     context.gear_dict['output_config'], \
     context.gear_dict['output_config_filename'] = \
-            struct_utils.configs_to_export(context)    
+            struct_utils.configs_to_export(context)  
+
+    context.gear_dict['output_zip_name'] =  op.join(
+        context.output_dir, 
+        '{}_hcpstruct.zip'.format(context.config['Subject'])
+    )
     # Pipelines common commands
     # QUEUE works differently in FSL 6.0.1..we are not using it.
     QUEUE = "-q "
