@@ -42,7 +42,7 @@
       }
     },
     "FreeSurferLicense": {
-      "description": "FreeSurfer license.txt file (found in $FREESURFER_HOME/license.txt)",
+      "description": "FreeSurfer license.txt file",
       "base": "file",
       "optional": true
     },
