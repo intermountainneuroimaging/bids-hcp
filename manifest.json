@@ -44,7 +44,7 @@
     "FreeSurferLicense": {
       "description": "FreeSurfer license.txt file (found in $FREESURFER_HOME/license.txt)",
       "base": "file",
-      "optional": false
+      "optional": true
     },
     "GradientCoeff": {
       "description": "Scanner gradient nonlinearity coefficient file",
@@ -102,6 +102,11 @@
       "type": "string",
       "description": "Subject ID (use to override session subject id)",
       "optional": true
+    },
+    "FREESURFER_LICENSE": {
+        "description": "FreeSurfer license as space-separated string.",
+        "type": "string",
+        "optional": true
     },
     "RegName": {
       "type": "string",

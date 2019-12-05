@@ -21,6 +21,17 @@ if __name__ == '__main__':
     gear_preliminaries.initialize_gear(context)
     context.log_config()
 
+    # Utilize FreeSurfer license from config or project metadata
+    try:
+        gear_preliminaries.set_freesurfer_license(context)
+    except Exception as e:
+        context.log.exception(e)
+        context.log.fatal(
+            'A valid FreeSurfer license must be present to run.' + \
+            'Please check your configuration and try again.'
+        )
+        os.sys.exit(1)
+
     # Validate gear configuration against gear manifest
     try:
         gear_preliminaries.validate_config_against_manifest(context)

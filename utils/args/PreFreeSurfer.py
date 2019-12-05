@@ -21,7 +21,7 @@ def build(context):
     # Check for all required inputs. Necessary for API calls
     # TODO: this should be taken care of in gear_preliminaries
     missing=[]
-    for req in ['T1','T2','FreeSurferLicense']:
+    for req in ['T1','T2']:
         if not req in inputs.keys():
             missing.append(req)
     if len(missing)>0:
@@ -29,9 +29,6 @@ def build(context):
         'Please provide the required input file(s), {}!'.format(missing)
         )
 
-    # Install FreeSurfer license file
-    shutil.copy(context.get_input_path('FreeSurferLicense'),
-                op.join(environ['FREESURFER_HOME'],'license.txt'))
     params['path'] = context.work_dir
     params['subject'] = config['Subject']
     params['t1'] = context.get_input_path('T1')
