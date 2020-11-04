@@ -1,19 +1,21 @@
 #!/usr/bin/env python3
-import os, os.path as op
-import json
-import subprocess as sp
-import copy
-import shutil
+import os
+import os.path as op
 
 import flywheel
-from utils.custom_logger import get_custom_logger
-from utils.args import PreFreeSurfer, FreeSurfer, PostFreeSurfer
-from utils.args import hcpstruct_qc_scenes, hcpstruct_qc_mosaic
-from utils.args import PostProcessing
-from utils import results, gear_preliminaries
-from utils import struct_utils
 
-if __name__ == '__main__':
+from utils import gear_preliminaries, results, struct_utils
+from utils.args import (
+    FreeSurfer,
+    PostFreeSurfer,
+    PostProcessing,
+    PreFreeSurfer,
+    hcpstruct_qc_mosaic,
+    hcpstruct_qc_scenes,
+)
+from utils.custom_logger import get_custom_logger
+
+if __name__ == "__main__":
     # Preamble: take care of all gear-typical activities.
     context = flywheel.GearContext()
     context.gear_dict = {}
@@ -27,8 +29,8 @@ if __name__ == '__main__':
     except Exception as e:
         context.log.exception(e)
         context.log.fatal(
-            'A valid FreeSurfer license must be present to run.' + \
-            'Please check your configuration and try again.'
+            "A valid FreeSurfer license must be present to run."
+            "Please check your configuration and try again."
         )
         os.sys.exit(1)
 
@@ -37,14 +39,13 @@ if __name__ == '__main__':
         gear_preliminaries.validate_config_against_manifest(context)
     except Exception as e:
         context.log.exception(e)
-        context.log.fatal(
-            'Please make the prescribed corrections and try again.'
-        )
+        context.log.fatal("Please make the prescribed corrections and try again.")
         os.sys.exit(1)
 
     # Can I automate this? Do I want to?
-    context.gear_dict['FreeSurfer_Version'] = \
-        struct_utils.get_freesurfer_version(context)
+    context.gear_dict["FreeSurfer_Version"] = struct_utils.get_freesurfer_version(
+        context
+    )
 
     ###########################################################################
     # Build and Validate parameters for all stages of the pipeline before
@@ -56,19 +57,17 @@ if __name__ == '__main__':
         gear_preliminaries.set_subject(context)
     except Exception as e:
         context.log.exception(e)
-        context.log.fatal(
-            'The Subject ID is not valid. Examine and try again.',
-        )
+        context.log.fatal("The Subject ID is not valid. Examine and try again.",)
         os.sys.exit(1)
 
-    # Build and Validate Parameters for the PreFreeSurferPipeline.sh 
+    # Build and Validate Parameters for the PreFreeSurferPipeline.sh
     try:
         PreFreeSurfer.build(context)
         PreFreeSurfer.validate(context)
     except Exception as e:
         context.log.exception(e)
         context.log.fatal(
-            'Validating Parameters for the PreFreeSurferPipeline Failed.',
+            "Validating Parameters for the PreFreeSurferPipeline Failed.",
         )
         os.sys.exit(1)
 
@@ -81,9 +80,7 @@ if __name__ == '__main__':
         # FreeSurfer.validate(context)
     except Exception as e:
         context.log.exception(e)
-        context.log.fatal(
-            'Validating Parameters for the FreeSurferPipeline Failed.'
-        )
+        context.log.fatal("Validating Parameters for the FreeSurferPipeline Failed.")
         os.sys.exit(1)
 
     ###########################################################################
@@ -94,41 +91,39 @@ if __name__ == '__main__':
     except Exception as e:
         context.log.exception(e)
         context.log.fatal(
-            'Validating Parameters for the PostFreeSurferPipeline Failed!'
+            "Validating Parameters for the PostFreeSurferPipeline Failed!"
         )
-        os.sys.exit(1)        
+        os.sys.exit(1)
 
     ###########################################################################
     # Some hcp-func specific output parameters:
-    context.gear_dict['output_config'], \
-    context.gear_dict['output_config_filename'] = \
-            struct_utils.configs_to_export(context)  
+    (
+        context.gear_dict["output_config"],
+        context.gear_dict["output_config_filename"],
+    ) = struct_utils.configs_to_export(context)
 
-    context.gear_dict['output_zip_name'] =  op.join(
-        context.output_dir, 
-        '{}_hcpstruct.zip'.format(context.config['Subject'])
+    context.gear_dict["output_zip_name"] = op.join(
+        context.output_dir, "{}_hcpstruct.zip".format(context.config["Subject"])
     )
     # Pipelines common commands
     # QUEUE works differently in FSL 6.0.1..we are not using it.
     QUEUE = "-q "
-    LogFileDirFull = op.join(context.work_dir,'logs')
+    LogFileDirFull = op.join(context.work_dir, "logs")
     os.makedirs(LogFileDirFull, exist_ok=True)
-    FSLSUBOPTIONS = "-l "+ LogFileDirFull
-    environ = context.gear_dict['environ']
-    command_common=[op.join(environ['FSLDIR'],'bin','fsl_sub'), FSLSUBOPTIONS]
-    
-    context.gear_dict['command_common'] = command_common
-    
+    FSLSUBOPTIONS = "-l " + LogFileDirFull
+    environ = context.gear_dict["environ"]
+    command_common = [op.join(environ["FSLDIR"], "bin", "fsl_sub"), FSLSUBOPTIONS]
+
+    context.gear_dict["command_common"] = command_common
+
     ###########################################################################
     # Run PreFreeSurferPipeline.sh from subprocess.run
     try:
         PreFreeSurfer.execute(context)
     except Exception as e:
         context.log.exception(e)
-        context.log.fatal(
-            'The PreFreeSurferPipeline Failed.',
-        )
-        if context.config['save-on-error']:
+        context.log.fatal("The PreFreeSurferPipeline Failed.",)
+        if context.config["save-on-error"]:
             results.cleanup(context)
         os.sys.exit(1)
 
@@ -139,8 +134,8 @@ if __name__ == '__main__':
         FreeSurfer.execute(context)
     except Exception as e:
         context.log.exception(e)
-        context.log.fatal('The FreeSurferPipeline Failed.')
-        if context.config['save-on-error']:
+        context.log.fatal("The FreeSurferPipeline Failed.")
+        if context.config["save-on-error"]:
             results.cleanup(context)
         os.sys.exit(1)
 
@@ -150,10 +145,10 @@ if __name__ == '__main__':
         PostFreeSurfer.execute(context)
     except Exception as e:
         context.log.exception(e)
-        context.log.fatal('The PostFreeSurferPipeline Failed!')
-        if context.config['save-on-error']:
+        context.log.fatal("The PostFreeSurferPipeline Failed!")
+        if context.config["save-on-error"]:
             results.cleanup(context)
-        os.sys.exit(1)  
+        os.sys.exit(1)
 
     ###########################################################################
     # Run PostProcessing for "whitelisted" files
@@ -164,8 +159,8 @@ if __name__ == '__main__':
         PostProcessing.execute(context)
     except Exception as e:
         context.log.exception(e)
-        context.log.fatal('The Post Processing Failed!')
-        if context.config['save-on-error']:
+        context.log.fatal("The Post Processing Failed!")
+        if context.config["save-on-error"]:
             results.cleanup(context)
         os.sys.exit(1)
 
@@ -179,8 +174,8 @@ if __name__ == '__main__':
         hcpstruct_qc_mosaic.execute(context)
     except Exception as e:
         context.log.exception(e)
-        context.log.fatal('HCP Structural QC Images has failed!')
-        if context.config['save-on-error']:
+        context.log.fatal("HCP Structural QC Images has failed!")
+        if context.config["save-on-error"]:
             results.cleanup(context)
         exit(1)
 
