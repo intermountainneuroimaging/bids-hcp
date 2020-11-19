@@ -3,7 +3,7 @@
 #
 
 # Use Ubuntu 14.04 LTS
-FROM flywheel/fsl-base:5.0.9_trusty
+FROM flywheel/fsl-base:5.0.9-trusty
 
 LABEL maintainer="Flywheel <support@flywheel.io>"
 
