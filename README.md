@@ -1,7 +1,7 @@
 [![Docker Pulls](https://img.shields.io/docker/pulls/flywheel/hcp-struct.svg)](https://hub.docker.com/r/flywheel/hcp-struct/)
 [![Docker Stars](https://img.shields.io/docker/stars/flywheel/hcp-struct.svg)](https://hub.docker.com/r/flywheel/hcp-struct/)
 # flywheel/hcp-struct
-[Flywheel Gear](https://github.com/flywheel-io/gears/tree/master/spec) that runs the structural preprocessing steps of the [Human Connectome Project](http://www.humanconnectome.org) Minimal Preprocessing Pipeline (MPP) described in [Glasser et al. 2013](http://www.ncbi.nlm.nih.gov/pubmed/23668970).  Currently, this includes v4.0-alpha release of PreFreeSurfer, FreeSurfer, and PostFreeSurfer pipelines, as well as generating some helpful QC images. For more info on the pipelines, see [HCP Pipelines](https://github.com/Washington-University/Pipelines).
+[Flywheel Gear](https://github.com/flywheel-io/gears/tree/master/spec) that runs the structural preprocessing steps of the [Human Connectome Project](http://www.humanconnectome.org) Minimal Preprocessing Pipeline (MPP) described in [Glasser et al. 2013](http://www.ncbi.nlm.nih.gov/pubmed/23668970).  Currently, this includes v4.0.1 release of PreFreeSurfer, FreeSurfer, and PostFreeSurfer pipelines, as well as generating some helpful QC images. For more info on the pipelines, see [HCP Pipelines](https://github.com/Washington-University/Pipelines).
 
 ## Important notes
 * T1w and T2w volumes should not have any online bias-correction (e.g.: no "Pre-scan Normalize" option on Siemens scanners). If on-scanner bias-correction was applied, it must be applied to **BOTH** T1w and T2w inputs.
@@ -35,6 +35,9 @@
 * <code>\<subject\>\_hcpstruct.zip</code>: Zipped output directory containing complete <code>MNINonLinear/</code>, <code>T1w/</code>, and <code>T2w/</code> folders.
 * <code>\<subject\>\_hcpstruct\_QC.*.png</code>: QC images for visual inspection of output quality (details to come...)
 * Logs (details to come...)
+
+## Gear Release Notes
+The latest iteration of the hcp gears use a common docker base image to consolidate both library installations and common functionality across gears.  See [HCP Base Docker Image](https://github.com/flywheel-apps/hcp-base) for details.
 
 ## Important HCP Pipeline links
 * [HCP Pipelines](https://github.com/Washington-University/Pipelines)
