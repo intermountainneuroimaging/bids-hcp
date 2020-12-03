@@ -8,6 +8,7 @@ import os.path as op
 from collections import OrderedDict
 
 from tr import tr
+from utils.gear_preliminaries import create_sanitized_filepath
 
 from .common import build_command_list, exec_command
 
@@ -32,8 +33,8 @@ def build(context):
 
     params["path"] = context.work_dir
     params["subject"] = config["Subject"]
-    params["t1"] = context.get_input_path("T1")
-    params["t2"] = context.get_input_path("T2")
+    params["t1"] = create_sanitized_filepath(context.get_input_path("T1"))
+    params["t2"] = create_sanitized_filepath(context.get_input_path("T2"))
 
     # Pre-Fill certain parameters with "NONE"
     None_Params = [

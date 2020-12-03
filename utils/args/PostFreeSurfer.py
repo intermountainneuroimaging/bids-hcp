@@ -6,6 +6,7 @@ part of the hcp-struct gear
 import os
 import os.path as op
 import subprocess as sp
+
 from collections import OrderedDict
 
 from .common import build_command_list, exec_command
