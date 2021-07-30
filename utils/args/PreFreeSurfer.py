@@ -54,7 +54,10 @@ def build(context):
     ]
     # the parameter "--bfsigma" is not accounted for
     for p in None_Params:
-        params[p] = "NONE"
+        if p == 'echodiff' and config['echodiff']:
+            params[p] = config['echodiff']
+        else:
+            params[p] = "NONE"
 
     if "DwellTime" in inputs["T1"]["object"]["info"].keys():
         dwell_time = inputs["T1"]["object"]["info"]["DwellTime"]
@@ -125,7 +128,10 @@ def build(context):
         ):
             echotime1 = inputs["SiemensGREMagnitude"]["object"]["info"]["EchoTime"]
             echotime2 = inputs["SiemensGREPhase"]["object"]["info"]["EchoTime"]
-            params["echodiff"] = format((echotime2 - echotime1) * 1000.0, ".15f")
+            if not params["echodiff"]:
+                # In the case of merged magnitude files, echodiff is already calculated correctly
+                # in bids_file_locator.define_bids_files
+                params["echodiff"] = format((echotime2 - echotime1) * 1000.0, ".15f")
     # Else if TOPUP
     elif ("SpinEchoNegative" in inputs.keys()) and (
         "SpinEchoPositive" in inputs.keys()

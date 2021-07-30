@@ -2,7 +2,7 @@
 #
 #
 
-# Uses Ubuntu 16.04 LTS
+# Uses xenial
 FROM flywheel/hcp-base:1.0.3_4.3.0rc0
 
 LABEL maintainer="Flywheel <support@flywheel.io>"
@@ -19,18 +19,8 @@ ENV FSLDIR=/usr/share/fsl/6.0 \
     POSSUMDIR=/usr/share/fsl/6.0 \ 
     LD_LIBRARY_PATH=/usr/share/fsl/6.0/lib:$LD_LIBRARY_PATH \ 
     FSLTCLSH=/usr/bin/tclsh \ 
-    FSLWISH=/usr/bin/wish
-
-#############################################
-# Download and install Connectome Workbench 1.3.2 
-# Compatible with HCP v4.0.1
-
-ENV CARET7DIR=/opt/workbench/bin_linux64
-
-#############################################
-# Download and install HCP Pipelines
-
-# Using v4.0.1
+    FSLWISH=/usr/bin/wish \
+    CARET7DIR=/opt/workbench/bin_linux64
 
 # Set up specific environment variables for the HCP Pipeline
 ENV FSL_DIR="${FSLDIR}" \ 
@@ -65,7 +55,6 @@ RUN unset POSIXLY_CORRECT
 #############################################
 # FreeSurfer is installed in base image. Ensure environment is set
 # 6.0.1 ftp://surfer.nmr.mgh.harvard.edu/pub/dist/freesurfer/6.0.1/freesurfer-Linux-centos6_x86_64-stable-pub-v6.0.1.tar.gz
-# 5.3.0 ftp://surfer.nmr.mgh.harvard.edu/pub/dist/freesurfer/5.3.0-HCP/freesurfer-Linux-centos4_x86_64-stable-pub-v5.3.0-HCP.tar.gz
 
 # Set up the FreeSurfer environment
 ENV OS=Linux \ 
@@ -91,6 +80,13 @@ ENV OS=Linux \
 #############################################
 # MSM_HOCR v3 binary is installed in base image.
 ENV MSMBINDIR=${HCPPIPEDIR}/MSMBinaries
+
+# Install BIDS Validator
+RUN apt-get update &&\
+    apt-get install -y --no-install-recommends python3-pip && \
+    apt-get clean && \
+    pip install bids_validator && \
+    rm -rf /var/lib/apt/lists/*
 
 #############################################
 # Copy gear-specific utils and dependencies

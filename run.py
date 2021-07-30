@@ -3,7 +3,9 @@ import os
 import os.path as op
 
 import flywheel
+from flywheel_gear_toolkit import GearToolkitContext
 
+from utils.bids import bids_file_locator
 from utils import gear_preliminaries, results, struct_utils
 from utils.args import (
     FreeSurfer,
@@ -16,8 +18,11 @@ from utils.args import (
 from utils.custom_logger import get_custom_logger
 
 if __name__ == "__main__":
+    # Run all the BIDS-specific downloads and config settings
+    with GearToolkitContext() as gtk_context:
+        bids_file_locator.define_bids_files(gtk_context)
     # Preamble: take care of all gear-typical activities.
-    context = flywheel.GearContext()
+    context = flywheel.GearContext(config_path='hcp-struct-1.0.20_4.3.0-6104669c6c5ec8104ac786e2/config.json')
     context.gear_dict = {}
     # Initialize all hcp-gear variables.
     gear_preliminaries.initialize_gear(context)
