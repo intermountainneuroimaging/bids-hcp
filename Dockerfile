@@ -91,6 +91,9 @@ RUN apt-get update &&\
 #############################################
 # Copy gear-specific utils and dependencies
 COPY utils ${FLYWHEEL}/utils
+
+#TODO make a Docker user profile with permissions to the flywheel folder for singularity analysis
+#TODO copy each of the gears' directories into Docker and make sure that separation is maintained.
 COPY fw_gear_hcp_struct/scripts /tmp/scripts
 COPY fw_gear_hcp_struct/scenes /tmp/scenes
 
