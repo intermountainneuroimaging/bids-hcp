@@ -91,8 +91,8 @@ RUN apt-get update &&\
 #############################################
 # Copy gear-specific utils and dependencies
 COPY utils ${FLYWHEEL}/utils
-COPY scripts /tmp/scripts
-COPY scenes /tmp/scenes
+COPY fw_gear_hcp_struct/scripts /tmp/scripts
+COPY fw_gear_hcp_struct/scenes /tmp/scenes
 
 # Copy executable/manifest to Gear
 COPY run.py ${FLYWHEEL}/run.py

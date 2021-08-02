@@ -54,8 +54,8 @@ def build(context):
     ]
     # the parameter "--bfsigma" is not accounted for
     for p in None_Params:
-        if p == 'echodiff' and config['echodiff']:
-            params[p] = config['echodiff']
+        if p in config.keys():
+            params[p] = config[p]
         else:
             params[p] = "NONE"
 
