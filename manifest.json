@@ -76,6 +76,16 @@
         "type":"boolean",
         "default": false,
         "description": "Log all commands, but do not execute."
+    },
+    "gear-run-bids-validation": {
+        "type": "boolean",
+        "default": false,
+        "description": "Run BIDS validator prior to attempting analysis."
+    },
+    "gear-abort-on-bids-error": {
+        "type": "boolean",
+        "default": false,
+        "description": "Terminate gear if BIDS errors are encountered. (No output will be generated.)"
     }
   },
   "command": "/flywheel/v0/run.py"
