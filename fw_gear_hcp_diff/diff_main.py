@@ -4,30 +4,29 @@ import os.path as op
 
 import flywheel
 
-from utils import func_utils, gear_preliminaries, results
-from utils.args import (
-    GenericfMRISurfaceProcessingPipeline,
-    GenericfMRIVolumeProcessingPipeline,
-    hcpfunc_qc_mosaic,
-)
+from utils import diff_utils, gear_preliminaries, results
+from fw_gear_hcp_diff.args import hcpdiff_qc_mosaic, DiffPreprocPipeline
 
 
-def main():
+def run(context):
+    """
+    Set up and complete the Diffusion Processing stage in the HCP Pipeline.
+    """
     # Preamble: take care of all gear-typical activities.
-    context = flywheel.GearContext()
     context.gear_dict = {}
     # Initialize all hcp-gear variables.
     gear_preliminaries.initialize_gear(context)
+
     context.log_config()
 
-    # Utilize FreeSurfer license from config or project metadata
+    # Utilize FreeSurfer license from config or project metadata.
     try:
         gear_preliminaries.set_freesurfer_license(context)
     except Exception as e:
         context.log.exception(e)
         context.log.fatal(
-            "A valid FreeSurfer license must be present to run."
-            + "Please check your configuration and try again."
+            "A valid FreeSurfer license must be present to run. "
+            "Please check your configuration and try again."
         )
         os.sys.exit(1)
 
@@ -51,7 +50,7 @@ def main():
         context.gear_dict["hcp_struct_config"] = hcp_struct_config
     except Exception as e:
         context.log.exception(e)
-        context.log.fatal("Invalid hcp-struct zip file.")
+        context.log.error("Invalid hcp-struct zip file.")
         os.sys.exit(1)
 
     # Ensure the subject_id is set in a valid manner
@@ -63,26 +62,20 @@ def main():
         context.log.fatal("The Subject ID is not valid. Examine and try again.",)
         os.sys.exit(1)
 
-    # ##########################################################################
-    # #################Build and Validate Parameters############################
+    ############################################################################
+    # Build and Validate Parameters
     # Doing as much parameter checking before ANY computation.
     # Fail as fast as possible.
 
     try:
         # Build and validate from Volume Processing Pipeline
-        GenericfMRIVolumeProcessingPipeline.build(context)
-        GenericfMRIVolumeProcessingPipeline.validate(context)
+        DiffPreprocPipeline.build(context)
+        DiffPreprocPipeline.validate(context)
     except Exception as e:
         context.log.exception(e)
-        context.log.fatal("Validating Parameters for the fMRI Volume Pipeline Failed!")
-        os.sys.exit(1)
-
-    try:
-        # Build and validate from Surface Processign Pipeline
-        GenericfMRISurfaceProcessingPipeline.build(context)
-    except Exception as e:
-        context.log.exception(e)
-        context.log.fatal("Validating Parameters for the fMRI Surface Pipeline Failed!")
+        context.log.fatal(
+            "Validating Parameters for the " "Diffusion Preprocessing Pipeline Failed!"
+        )
         os.sys.exit(1)
 
     ###########################################################################
@@ -94,25 +87,26 @@ def main():
         context.log.fatal("Unzipping hcp-struct zipfile failed!")
         os.sys.exit(1)
 
-    # ##########################################################################
-    # ##################Execute HCP Pipelines ##################################
+    ############################################################################
+    # Execute HCP Pipelines
     # Some hcp-func specific output parameters:
     (
         context.gear_dict["output_config"],
         context.gear_dict["output_config_filename"],
-    ) = func_utils.configs_to_export(context)
+    ) = diff_utils.configs_to_export(context)
 
     context.gear_dict["output_zip_name"] = op.join(
         context.output_dir,
-        "{}_{}_hcpfunc.zip".format(
-            context.config["Subject"], context.config["fMRIName"]
+        "{}_{}_hcpdiff.zip".format(
+            context.config["Subject"], context.config["DWIName"]
         ),
     )
 
-    context.gear_dict["remove_files"] = func_utils.remove_intermediate_files
+    # context.gear_dict['remove_files'] = diff_utils.remove_intermediate_files
     ###########################################################################
     # Pipelines common commands
-    QUEUE = ""
+    # "QUEUE" is used differently in FSL 6.0... We don't use it here.
+    # QUEUE = "-q"
     LogFileDirFull = op.join(context.work_dir, "logs")
     os.makedirs(LogFileDirFull, exist_ok=True)
     FSLSUBOPTIONS = "-l " + LogFileDirFull
@@ -124,33 +118,23 @@ def main():
 
     context.gear_dict["command_common"] = command_common
 
-    # Execute fMRI Volume Pipeline
+    # Execute Diffusion Processing Pipeline
     try:
-        GenericfMRIVolumeProcessingPipeline.execute(context)
+        DiffPreprocPipeline.execute(context)
     except Exception as e:
         context.log.exception(e)
-        context.log.fatal("The fMRI Volume Pipeline Failed!")
+        context.log.fatal("The Diffusion Preprocessing Pipeline Failed!")
         if context.config["save-on-error"]:
             results.cleanup(context)
         os.sys.exit(1)
 
-    # Execute fMRI Surface Pipeline
+    # Generate Diffusion QC Images
     try:
-        GenericfMRISurfaceProcessingPipeline.execute(context)
+        hcpdiff_qc_mosaic.build(context)
+        hcpdiff_qc_mosaic.execute(context)
     except Exception as e:
         context.log.exception(e)
-        context.log.fatal("The fMRI Surface Pipeline Failed!")
-        if context.config["save-on-error"]:
-            results.cleanup(context)
-        os.sys.exit(1)
-
-    # Generate HCP-Functional QC Images
-    try:
-        hcpfunc_qc_mosaic.build(context)
-        hcpfunc_qc_mosaic.execute(context)
-    except Exception as e:
-        context.log.exception(e)
-        context.log.fatal("HCP Functional QC Images has failed!")
+        context.log.fatal("HCP Diffusion QC Images has failed!")
         if context.config["save-on-error"]:
             results.cleanup(context)
         exit(1)

@@ -10,7 +10,7 @@ from collections import OrderedDict
 
 from tr import tr
 
-from ..diff_utils import make_sym_link
+from utils.diff_utils import make_sym_link
 from ..gear_preliminaries import create_sanitized_filepath
 from .common import build_command_list, exec_command
 

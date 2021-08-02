@@ -36,16 +36,29 @@ class bidsInput:
         bids_dir = op.join(self.gtk_context.work_dir, 'bids')
         msg = self.grab_BIDS_data()
         log.info(msg)
-        #TODO add validate={config_option}
+        #TODO add validate={config_option for BIDS validation}
         self.layout = BIDSLayout(bids_dir, validate=False, derivatives=False, absolute_paths=True)
 
-        # Find the sub-* directories
+        # TODO add a session filter (These go at the end of the t1ws and t2ws calls to layout.get)
+        self.find_t1ws()
+        self.find_t2ws()
 
-        # TODO add a session filter (These go at the end of the t1ws nad t2ws args)
+        if 'struct' in self.gtk_context.config['stages']:
+            self.find_struct_fieldmaps()
+        if 'func' in self.gtk_context.config['stages']:
+            self.find_func_fieldmaps()
+            self.define_bolds()
+        if 'diff' in self.gtk_context.config['stages']:
+            self.find_dwis()
 
+        #TODO write a method that definitely updates the config.json
+        #Probably use .to_json from toolkit that will return a config.json
 
 
     def find_t1ws(self):
+        """
+        Locate the structural scans
+        """
         self.t1ws = [f.path for f in self.layout.get(subject=self.hierarchy.subject_label,
                                                suffix='T1w',
                                                extensions=["nii.gz", "nii"])]
@@ -72,7 +85,7 @@ class bidsInput:
             # HCP expects TE in miliseconds
             te_diff = te_diff * 1000.0
 
-            config.update({"fmapmag": merged_file,
+            self.config.update({"fmapmag": merged_file,
                               "fmapphase": fieldmap_set["phasediff"],
                               "echodiff": "%.6f" % te_diff,
                               "avgrdcmethod": "SiemensFieldMap"})
@@ -90,94 +103,115 @@ class bidsInput:
                     SEPhasePos = fieldmap['epi']
 
             seunwarpdir = self.layout.get_metadata(fieldmap_set[0]["epi"])["PhaseEncodingDirection"]
+        #TODO check if the seunwarpdir is a BIDS app or HCP arg; capitalization??
+        self.config.update({"SEPhaseNeg": SEPhaseNeg,
+                            "SEPhasePos": SEPhasePos,
+                            "seunwarpdir": seunwarpdir
+        })
 
-    #def find_bolds():
-            # bolds = [f.path for f in layout.get(subject=subject_label,
-            #                                     suffix='bold',
-            #                                     extensions=["nii.gz", "nii"],
-            #                                     **session_to_analyze)
-            #          for fmritcs in bolds:
-            # fmriname = "_".join(fmritcs.split("sub-")[-1].split("_")[1:]).split(".")[0]
-            # assert fmriname
-            #
-            # fmriscout = fmritcs.replace("_bold", "_sbref")
-            # if not os.path.exists(fmriscout):
-            #     fmriscout = "NONE"
-            #
-            # fieldmap_set = layout.get_fieldmap(fmritcs, return_list=True)
-            # if fieldmap_set and len(fieldmap_set) == 2 and all(item["suffix"] == "epi" for item in fieldmap_set) and (
-            #         args.processing_mode != 'legacy'):
-            #     SEPhaseNeg = None
-            #     SEPhasePos = None
-            #     for fieldmap in fieldmap_set:
-            #         enc_dir = layout.get_metadata(fieldmap["epi"])["PhaseEncodingDirection"]
-            #     if "-" in enc_dir:
-            #         SEPhaseNeg = fieldmap['epi']
-            #     else:
-            #         SEPhasePos = fieldmap['epi']
+    def find_bolds(self):
+        # TODO add session filter here especially
+            self.bolds = [f.path for f in layout.get(subject=self.hierarchy.subject_label,
+                                                suffix='bold')
+            for fmritcs in self.bolds:
+                fmriname = "_".join(fmritcs.split("sub-")[-1].split("_")[1:]).split(".")[0]
+                assert fmriname
 
-    #def find_dwis():
-            # dwis = layout.get(subject=subject_label, suffix='dwi',
-            #                   extensions=["nii.gz", "nii"])
-            # numruns = set(layout.get(target='run', return_type='id',
-            #                          subject=subject_label, type='dwi',
-            #                          extensions=["nii.gz", "nii"]))
-            # # accounts for multiple runs, number of directions, and phase encoding directions
-            #
-            # if numruns:
-            #     for numrun in numruns:
-            #         if not onerun:
-            #             bvals = [f.filename for f in layout.get(subject=subject_label,
-            #                                                     type='dwi', run=numrun,
-            #                                                     extensions=["bval"])]
-            #         else:
-            #             bvals = [f.filename for f in layout.get(subject=subject_label,
-            #                                                     type='dwi', extensions=["bval"])]
-            #         ## find number of directions by reading bval files, then create dictionary with corresponding
-            #         # bval file name, number of directions, dwi image file name, and phase encoding direction (i or j).
-            #         dwi_dict = {'bvalFile':[], 'bval':[], 'dwiFile':[], 'direction':[]}
-            #         for bvalfile in bvals: # find number of directions
-            #             with open(bvalfile) as f:
-            #                 bvalues = [bvalue for line in f for bvalue in line.split()]
-            #             # fill in the rest of dictionary
-            #             dwi_dict['bvalFile'].append(bvalfile)
-            #             dwi_dict['bval'].append(len(bvalues) - 1)
-            #             dwiFile = glob(os.path.join(os.path.dirname(bvalfile),'{0}.nii*'.format(os.path.basename(bvalfile).split('.')[0]))) # ensures bval file has same name as dwi file
-            #             assert len(dwiFile) == 1
-            #             dwi_dict['dwiFile'].append(dwiFile[0])
-            #             dwi_dict['direction'].append(layout.get_metadata(dwiFile[0])["PhaseEncodingDirection"][0])
-            #
-            #         # check if length of lists in dictionary are the same
-            #         n = len(dwi_dict['bvalFile'])
-            #         assert all(len(dwi_dict[k]) == n for k,v in dwi_dict.items())
-            #
-            #         for dirnum in set(dwi_dict['bval']):
-            #             ## the following statement extracts index values in dwi_dict['bval'] if the value matches
-            #             # "dirnum", which is the number of directions (i.e. 98 or 99). These index values are used
-            #             # to find the corresponding PE directions, dwi file names, etc. in the dictionary
-            #             idxs = { i for k,v in dwi_dict.iteritems() for i in range(0,len(dwi_dict['bval'])) if v[i] == dirnum }
-            #             PEdirNums = set([dwi_dict['direction'][i] for i in idxs])
-            #             for PEdirNum in PEdirNums:
-            #                 dwis = [ dwi_dict['dwiFile'][i] for i in idxs if dwi_dict['direction'][i] == PEdirNum ]
-            #                 assert len(dwis) <= 2
-            #                 dwiname = "Diffusion" + "_dir-" + str(dirnum) + "_" + numrun + "_corr_" + str(PEdirNum)
-            #                 if "j" in PEdirNum:
-            #                     PEdir = 2
-            #                 elif "i" in PEdirNum:
-            #                     PEdir = 1
-            #                 else:
-            #                     RuntimeError("Phase encoding direction not specified for diffusion data.")
-            #                 pos = "EMPTY"
-            #                 neg = "EMPTY"
-            #                 gdcoeffs = "None"
-            #                 for dwi in dwis:
-            #                     if "-" in layout.get_metadata(dwi)["PhaseEncodingDirection"]:
-            #                         neg = dwi
-            #                     else:
-            #                         pos = dwi
-            #
-            #                     echospacing = layout.get_metadata(pos)["EffectiveEchoSpacing"] * 1000
+            #TODO valid for FLywheel's curations?
+            fmriscout = fmritcs.replace("_bold", "_sbref")
+            if not os.path.exists(fmriscout):
+                fmriscout = "NONE"
 
+            fieldmap_set = self.layout.get_fieldmap(fmritcs, return_list=True)
+            if fieldmap_set and len(fieldmap_set) == 2 and all(item["suffix"] == "epi" for item in fieldmap_set) and (
+                    self.config.processing_mode != 'legacy'):
+                #TODO add different processing modes to manifest?
+                SEPhaseNeg = None
+                SEPhasePos = None
+                for fieldmap in fieldmap_set:
+                    enc_dir = self.layout.get_metadata(fieldmap["epi"])["PhaseEncodingDirection"]
+                if "-" in enc_dir:
+                    SEPhaseNeg = fieldmap['epi']
+                else:
+                    SEPhasePos = fieldmap['epi']
+            # TODO check here for collisions in parameters too.
+            self.config.update({
+                'fmriscout':fmriscout,
+                'SEPhasePos':SEPhasePos,
+                'SEPhaseNeg':SEPhaseNeg
+            })
+
+    def find_dwis(self):
+            dwis = layout.get(subject=subject_label, suffix='dwi')
+            numruns = set(layout.get(target='run', return_type='id',
+                                     subject=subject_label, type='dwi'))
+            # accounts for multiple runs, number of directions, and phase encoding directions
+
+            #TODO figure out what is intended by looking for multiple runs
+
+            if numruns:
+                for numrun in numruns:
+                    if not onerun:
+                        bvals = [f.filename for f in layout.get(subject=subject_label,
+                                                                type='dwi', run=numrun)]
+                    else:
+                        bvals = [f.filename for f in layout.get(subject=subject_label,
+                                                                type='dwi', extensions=["bval"])]
+                    ## find number of directions by reading bval files, then create dictionary with corresponding
+                    # bval file name, number of directions, dwi image file name, and phase encoding direction (i or j).
+                    dwi_dict = {'bvalFile':[], 'bval':[], 'dwiFile':[], 'direction':[]}
+
+                    # TODO differentiate between bvec and bval, since extensions arg no longer valid
+                    for bvalfile in bvals: # find number of directions
+                        with open(bvalfile) as f:
+                            bvalues = [bvalue for line in f for bvalue in line.split()]
+                        # fill in the rest of dictionary
+                        dwi_dict['bvalFile'].append(bvalfile)
+                        dwi_dict['bval'].append(len(bvalues) - 1)
+                        dwiFile = glob(os.path.join(os.path.dirname(bvalfile),'{0}.nii*'.format(os.path.basename(bvalfile).split('.')[0]))) # ensures bval file has same name as dwi file
+                        assert len(dwiFile) == 1
+                        dwi_dict['dwiFile'].append(dwiFile[0])
+                        dwi_dict['direction'].append(layout.get_metadata(dwiFile[0])["PhaseEncodingDirection"][0])
+
+                    # check if length of lists in dictionary are the same
+                    n = len(dwi_dict['bvalFile'])
+                    assert all(len(dwi_dict[k]) == n for k,v in dwi_dict.items())
+
+                    for dirnum in set(dwi_dict['bval']):
+                        ## the following statement extracts index values in dwi_dict['bval'] if the value matches
+                        # "dirnum", which is the number of directions (i.e. 98 or 99). These index values are used
+                        # to find the corresponding PE directions, dwi file names, etc. in the dictionary
+                        idxs = { i for k,v in dwi_dict.iteritems() for i in range(0,len(dwi_dict['bval'])) if v[i] == dirnum }
+                        PEdirNums = set([dwi_dict['direction'][i] for i in idxs])
+                        for PEdirNum in PEdirNums:
+                            dwis = [ dwi_dict['dwiFile'][i] for i in idxs if dwi_dict['direction'][i] == PEdirNum ]
+                            assert len(dwis) <= 2
+                            dwiname = "Diffusion" + "_dir-" + str(dirnum) + "_" + numrun + "_corr_" + str(PEdirNum)
+                            if "j" in PEdirNum:
+                                PEdir = 2
+                            elif "i" in PEdirNum:
+                                PEdir = 1
+                            else:
+                                RuntimeError("Phase encoding direction not specified for diffusion data.")
+                            pos = "EMPTY"
+                            neg = "EMPTY"
+                            gdcoeffs = "None"
+                            for dwi in dwis:
+                                if "-" in layout.get_metadata(dwi)["PhaseEncodingDirection"]:
+                                    neg = dwi
+                                else:
+                                    pos = dwi
+
+                                echospacing = layout.get_metadata(pos)["EffectiveEchoSpacing"] * 1000
+    #TODO make sure there are not naming collisions in the config dict such that parameters (e.g., echospacing
+    #is overwritten from structural setup to func to diff
+                    self.config.update({
+                        "dwiname":dwiname,
+                        "PEdir":PEdir,
+                        "pos": pos,
+                        "neg":neg,
+                        "echospacing": echospacing
+                    })
 
     def grab_BIDS_data(self):
         """

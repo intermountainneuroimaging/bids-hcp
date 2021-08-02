@@ -9,9 +9,9 @@ from fw_gear_hcp_struct.args import FreeSurfer, PostProcessing, hcpstruct_qc_mos
 
 def run(context):
     """
-
+    Set up and complete the FreeSurfer stages in the HCP Pipeline.
     """
-    # Original code from hcp-struct run.py
+    # Original code from hcp-struct func_main.py
     # Preamble: take care of all gear-typical activities.
     context.gear_dict = {}
     # Initialize all hcp-gear variables.
