@@ -6,7 +6,10 @@ part of the hcp-func gear
 import logging
 import os.path as op
 
-from .common import build_command_list, exec_command
+from flywheel.GearToolkitContext.interfaces.command_line import (
+    build_command_list,
+    exec_command,
+)
 
 log = logging.getLogger(__name__)
 

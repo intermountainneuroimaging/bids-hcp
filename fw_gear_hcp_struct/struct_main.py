@@ -1,6 +1,7 @@
 import os
+import logging
 
-from bids_hcp_struct.utils import gear_preliminaries, results, struct_utils
+from utils import results, struct_utils
 
 from fw_gear_hcp_struct.args import (
     FreeSurfer,
@@ -10,7 +11,7 @@ from fw_gear_hcp_struct.args import (
     hcpstruct_qc_mosaic,
     hcpstruct_qc_scenes,
 )
-
+log = logging.getLogger(__name__)
 
 def run(context):
     """
@@ -126,7 +127,7 @@ def run(context):
         context.log.fatal(
             "The PreFreeSurferPipeline Failed.",
         )
-        if context.config["save-on-error"]:
+        if context.config["gear-save-on-error"]:
             results.cleanup(context)
         os.sys.exit(1)
 
@@ -138,7 +139,7 @@ def run(context):
     except Exception as e:
         context.log.exception(e)
         context.log.fatal("The FreeSurferPipeline Failed.")
-        if context.config["save-on-error"]:
+        if context.config["gear-save-on-error"]:
             results.cleanup(context)
         os.sys.exit(1)
 
@@ -149,7 +150,7 @@ def run(context):
     except Exception as e:
         context.log.exception(e)
         context.log.fatal("The PostFreeSurferPipeline Failed!")
-        if context.config["save-on-error"]:
+        if context.config["gear-save-on-error"]:
             results.cleanup(context)
         os.sys.exit(1)
 
@@ -163,7 +164,7 @@ def run(context):
     except Exception as e:
         context.log.exception(e)
         context.log.fatal("The Post Processing Failed!")
-        if context.config["save-on-error"]:
+        if context.config["gear-save-on-error"]:
             results.cleanup(context)
         os.sys.exit(1)
 
@@ -178,7 +179,7 @@ def run(context):
     except Exception as e:
         context.log.exception(e)
         context.log.fatal("HCP Structural QC Images has failed!")
-        if context.config["save-on-error"]:
+        if context.config["gear-save-on-error"]:
             results.cleanup(context)
         exit(1)
 

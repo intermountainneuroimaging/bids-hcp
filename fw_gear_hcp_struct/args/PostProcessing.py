@@ -6,11 +6,13 @@ However, what is requested in the volume and area information of the FS output
 rather than the registered and segmented volumes and surfaces (L296-L317).
 part of the hcp-struct gear
 """
+import logging
 import os.path as op
 
 import pandas as pd
+from flywheel.GearToolkitContext.interfaces.command_line import exec_command
 
-from .common import exec_command
+log = logging.getLogger(__name__)
 
 
 def build(context):
@@ -93,5 +95,5 @@ def execute(context):
 
     # Process segmentation data to csv and process to metadata
     if config["aseg_csv"]:
-        context.log.info("Exporting stats files csv...")
+        log.info("Exporting stats files csv...")
         process_aseg_csv(context)

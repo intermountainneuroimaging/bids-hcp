@@ -4,10 +4,16 @@ Builds, validates, and excecutes parameters for the HCP helper script
 part of the hcp-diff gear
 """
 
+import logging
 import os.path as op
 from collections import OrderedDict
 
-from .common import build_command_list, exec_command
+from flywheel.GearToolkitContext.interfaces.command_line import (
+    build_command_list,
+    exec_command,
+)
+
+log = logging.getLogger(__name__)
 
 
 def build(context):
@@ -38,5 +44,5 @@ def execute(context):
         + 'in the file "pipeline_logs.zip" upon completion.'
     )
 
-    context.log.info("Diffusion QC Image Generation command: \n")
+    log.info("Diffusion QC Image Generation command: \n")
     exec_command(context, command, shell=True, stdout_msg=stdout_msg)

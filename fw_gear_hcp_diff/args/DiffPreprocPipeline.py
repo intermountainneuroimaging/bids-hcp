@@ -8,11 +8,13 @@ import os
 import os.path as op
 from collections import OrderedDict
 
+from flywheel.GearToolkitContext.interfaces.command_line import (
+    build_command_list,
+    exec_command,
+)
 from tr import tr
 
 from utils.diff_utils import make_sym_link
-from ..gear_preliminaries import create_sanitized_filepath
-from .common import build_command_list, exec_command
 
 log = logging.getLogger(__name__)
 

@@ -10,10 +10,13 @@ import os.path as op
 import re
 from collections import OrderedDict
 
+from flywheel.GearToolkitContext.interfaces.command_line import (
+    build_command_list,
+    exec_command,
+)
 from tr import tr
-from utils.gear_preliminaries import create_sanitized_filepath
 
-from .common import build_command_list, exec_command
+from utils.gear_preliminaries import create_sanitized_filepath
 
 log = logging.getLogger(__name__)
 

@@ -1,45 +1,24 @@
 #!/usr/bin/env python3
+import logging
 import os
 import os.path as op
 
 import flywheel
 
 from fw_gear_hcp_func.args import (
-    GenericfMRISurfaceProcessingPipeline, GenericfMRIVolumeProcessingPipeline, hcpfunc_qc_mosaic)
-from utils import func_utils, gear_preliminaries, results
+    GenericfMRISurfaceProcessingPipeline,
+    GenericfMRIVolumeProcessingPipeline,
+    hcpfunc_qc_mosaic,
+)
+from utils import func_utils, results
+
+log = logging.getLogger(__name__)
 
 
 def run(context):
     """
     Set up and complete the fMRIVolume and fMRISurface stages of the HCP Pipeline.
     """
-    # Preamble: take care of all gear-typical activities.
-    context.gear_dict = {}
-    # Initialize all hcp-gear variables.
-    gear_preliminaries.initialize_gear(context)
-    context.log_config()
-
-    # Utilize FreeSurfer license from config or project metadata
-    try:
-        gear_preliminaries.set_freesurfer_license(context)
-    except Exception as e:
-        context.log.exception(e)
-        context.log.fatal(
-            "A valid FreeSurfer license must be present to run."
-            + "Please check your configuration and try again."
-        )
-        os.sys.exit(1)
-
-    # Before continuing from here, we need to validate the config.json
-    # Validate gear configuration against gear manifest
-    try:
-        gear_preliminaries.validate_config_against_manifest(context)
-    except Exception as e:
-        context.log.error("Invalid Configuration:")
-        context.log.exception(e)
-        context.log.fatal("Please make the prescribed corrections and try again.")
-        os.sys.exit(1)
-
     # Get file list and configuration from hcp-struct zipfile
     try:
         hcp_struct_zip_filename = context.get_input_path("StructZip")
@@ -49,8 +28,8 @@ def run(context):
         context.gear_dict["exclude_from_output"] = hcp_struct_list
         context.gear_dict["hcp_struct_config"] = hcp_struct_config
     except Exception as e:
-        context.log.exception(e)
-        context.log.fatal("Invalid hcp-struct zip file.")
+        log.exception(e)
+        log.fatal("Invalid hcp-struct zip file.")
         os.sys.exit(1)
 
     # Ensure the subject_id is set in a valid manner
@@ -58,8 +37,8 @@ def run(context):
     try:
         gear_preliminaries.set_subject(context)
     except Exception as e:
-        context.log.exception(e)
-        context.log.fatal(
+        log.exception(e)
+        log.fatal(
             "The Subject ID is not valid. Examine and try again.",
         )
         os.sys.exit(1)
@@ -74,16 +53,16 @@ def run(context):
         GenericfMRIVolumeProcessingPipeline.build(context)
         GenericfMRIVolumeProcessingPipeline.validate(context)
     except Exception as e:
-        context.log.exception(e)
-        context.log.fatal("Validating Parameters for the fMRI Volume Pipeline Failed!")
+        log.exception(e)
+        log.fatal("Validating Parameters for the fMRI Volume Pipeline Failed!")
         os.sys.exit(1)
 
     try:
         # Build and validate from Surface Processign Pipeline
         GenericfMRISurfaceProcessingPipeline.build(context)
     except Exception as e:
-        context.log.exception(e)
-        context.log.fatal("Validating Parameters for the fMRI Surface Pipeline Failed!")
+        log.exception(e)
+        log.fatal("Validating Parameters for the fMRI Surface Pipeline Failed!")
         os.sys.exit(1)
 
     ###########################################################################
@@ -91,8 +70,8 @@ def run(context):
     try:
         gear_preliminaries.unzip_hcp(context, hcp_struct_zip_filename)
     except Exception as e:
-        context.log.exception(e)
-        context.log.fatal("Unzipping hcp-struct zipfile failed!")
+        log.exception(e)
+        log.fatal("Unzipping hcp-struct zipfile failed!")
         os.sys.exit(1)
 
     # ##########################################################################
@@ -129,9 +108,9 @@ def run(context):
     try:
         GenericfMRIVolumeProcessingPipeline.execute(context)
     except Exception as e:
-        context.log.exception(e)
-        context.log.fatal("The fMRI Volume Pipeline Failed!")
-        if context.config["save-on-error"]:
+        log.exception(e)
+        log.fatal("The fMRI Volume Pipeline Failed!")
+        if context.config["gear-save-on-error"]:
             results.cleanup(context)
         os.sys.exit(1)
 
@@ -139,9 +118,9 @@ def run(context):
     try:
         GenericfMRISurfaceProcessingPipeline.execute(context)
     except Exception as e:
-        context.log.exception(e)
-        context.log.fatal("The fMRI Surface Pipeline Failed!")
-        if context.config["save-on-error"]:
+        log.exception(e)
+        log.fatal("The fMRI Surface Pipeline Failed!")
+        if context.config["gear-save-on-error"]:
             results.cleanup(context)
         os.sys.exit(1)
 
@@ -150,9 +129,9 @@ def run(context):
         hcpfunc_qc_mosaic.build(context)
         hcpfunc_qc_mosaic.execute(context)
     except Exception as e:
-        context.log.exception(e)
-        context.log.fatal("HCP Functional QC Images has failed!")
-        if context.config["save-on-error"]:
+        log.exception(e)
+        log.fatal("HCP Functional QC Images has failed!")
+        if context.config["gear-save-on-error"]:
             results.cleanup(context)
         exit(1)
 
