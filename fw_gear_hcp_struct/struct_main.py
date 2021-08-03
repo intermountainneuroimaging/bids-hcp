@@ -1,11 +1,16 @@
 import os
+
 from bids_hcp_struct.utils import gear_preliminaries, results, struct_utils
+
 from fw_gear_hcp_struct.args import (
+    FreeSurfer,
     PostFreeSurfer,
+    PostProcessing,
     PreFreeSurfer,
+    hcpstruct_qc_mosaic,
     hcpstruct_qc_scenes,
 )
-from fw_gear_hcp_struct.args import FreeSurfer, PostProcessing, hcpstruct_qc_mosaic
+
 
 def run(context):
     """
@@ -51,7 +56,9 @@ def run(context):
         gear_preliminaries.set_subject(context)
     except Exception as e:
         context.log.exception(e)
-        context.log.fatal("The Subject ID is not valid. Examine and try again.",)
+        context.log.fatal(
+            "The Subject ID is not valid. Examine and try again.",
+        )
         os.sys.exit(1)
 
     # Build and Validate Parameters for the PreFreeSurferPipeline.sh
@@ -116,7 +123,9 @@ def run(context):
         PreFreeSurfer.execute(context)
     except Exception as e:
         context.log.exception(e)
-        context.log.fatal("The PreFreeSurferPipeline Failed.",)
+        context.log.fatal(
+            "The PreFreeSurferPipeline Failed.",
+        )
         if context.config["save-on-error"]:
             results.cleanup(context)
         os.sys.exit(1)

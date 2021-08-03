@@ -4,8 +4,8 @@ import os.path as op
 
 import flywheel
 
+from fw_gear_hcp_diff.args import DiffPreprocPipeline, hcpdiff_qc_mosaic
 from utils import diff_utils, gear_preliminaries, results
-from fw_gear_hcp_diff.args import hcpdiff_qc_mosaic, DiffPreprocPipeline
 
 
 def run(context):
@@ -59,7 +59,9 @@ def run(context):
         gear_preliminaries.set_subject(context)
     except Exception as e:
         context.log.exception(e)
-        context.log.fatal("The Subject ID is not valid. Examine and try again.",)
+        context.log.fatal(
+            "The Subject ID is not valid. Examine and try again.",
+        )
         os.sys.exit(1)
 
     ############################################################################

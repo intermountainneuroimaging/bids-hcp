@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "bids_hcp_struct"
+name = "bids_hcp"
 version = "0.0.1"
-description = "Structural processing according to HCP pipeline methodology"
+description = "Processing according to HCP pipeline methodology, adapted for BIDS structured data"
 authors = ["support@flywheel.io"]
 license = "Other"
 

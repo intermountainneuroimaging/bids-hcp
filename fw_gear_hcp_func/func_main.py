@@ -4,9 +4,9 @@ import os.path as op
 
 import flywheel
 
+from fw_gear_hcp_func.args import (
+    GenericfMRISurfaceProcessingPipeline, GenericfMRIVolumeProcessingPipeline, hcpfunc_qc_mosaic)
 from utils import func_utils, gear_preliminaries, results
-from fw_gear_hcp_func.args import GenericfMRIVolumeProcessingPipeline, GenericfMRISurfaceProcessingPipeline, \
-    hcpfunc_qc_mosaic
 
 
 def run(context):
@@ -59,7 +59,9 @@ def run(context):
         gear_preliminaries.set_subject(context)
     except Exception as e:
         context.log.exception(e)
-        context.log.fatal("The Subject ID is not valid. Examine and try again.",)
+        context.log.fatal(
+            "The Subject ID is not valid. Examine and try again.",
+        )
         os.sys.exit(1)
 
     # ##########################################################################
