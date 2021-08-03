@@ -13,11 +13,8 @@ log = logging.getLogger(__name__)
 
 
 class bidsInput:
-    def __init__(self, pth=None):
-        if pth:
-            self.gtk_context = GearToolkitContext(config_path=pth)
-        else:
-            self.gtk_context = GearToolkitContext()
+    def __init__(self, context: GearToolkitContext):
+        self.gtk_context = context
         self.config = self.gtk_context.config_json
         self.hierarchy = run_level.get_run_level_and_hierarchy(
             self.gtk_context.client, self.gtk_context.destination["id"]
