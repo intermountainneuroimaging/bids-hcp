@@ -10,7 +10,6 @@ python = "^3.9"
 pybids = "^0.13.1"
 flywheel-gear-toolkit = "^0.3.2"
 flywheel-sdk = "^15.8.0"
-flywheel-gear-cli = ""
 
 [tool.poetry.dev-dependencies]
 

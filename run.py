@@ -18,6 +18,9 @@ def main(gtk_context):
     if "struct" in new_config.gtk_context.config.get("stages"):
         e_code = struct_main.run(new_config)
 
+    # Structural stage ends with zipping file. If that stage is complete, either from prior processing
+    # or from current run, there should be a zip file to grab.
+    new_config.update_struct_zip()
     if "func" in new_config.gtk_context.config.get("stages") and e_code == 0:
         # TODO run a check for structural stage output. Exit if missing.
         e_code = func_main.run(new_config)

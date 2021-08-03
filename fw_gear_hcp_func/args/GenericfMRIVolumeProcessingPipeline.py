@@ -77,7 +77,7 @@ def build(context):
 
     params["mctype"] = config["MotionCorrection"]
 
-    params["dof"] = config["AnatomyRegDOF"]
+    params["dof"] = config["Func_AnatomyRegDOF"]
 
     # Parse Inputs
     # If SiemensFieldMap

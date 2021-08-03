@@ -1,36 +1,8 @@
-{
-  "name": "bids_hcp",
-  "label": "BIDS-based HCP Preprocessing Pipeline",
-  "description": "Runs the preprocessing steps of the Human Connectome Project Minimal Preprocessing Pipeline, described in Glasser et al. 2013. Currently this includes v4.3.0 release of PreFreeSurfer, FreeSurfer, and PostFreeSurfer pipelines. This Gear also generates some helpful QC images.",
-  "author": "Human Connectome Project",
-  "maintainer": "Flywheel <support@flywheel.io>",
-  "license": "Other",
-  "url": "https://github.com/Washington-University/Pipelines",
-  "source": "https://github.com/flywheel-apps/bids_hcp",
+{ "author": "Human Connectome Project",
   "cite": "Glasser M. F., Sotiropoulos S. N., Wilson J. A., Coalson T. S., Fischl B., Andersson J. L., … Consortium, W. U.-M. H. (2013). The minimal preprocessing pipelines for the Human Connectome Project. NeuroImage, 80, 105–124.",
-  "version": "0.0.1_4.3.0",
-  "custom": {
-    "docker-image": "flywheel/bids_hcp:0.0.1_4.3.0",
-    "gear-builder": {
-      "category": "analysis",
-      "image": "flywheel/bids_hcp:0.0.1_4.3.0"
-    },
-    "flywheel": {
-      "suite": "Human Connectome Project"
-    }
-  },
-  "inputs": {
-    "api-key": {
-        "base": "api-key"
-    },
-    "FreeSurferLicense": {
-      "description": "FreeSurfer license.txt file",
-      "base": "file",
-      "optional": true
-    }
-  },
+  "command": "/flywheel/v0/run.py",
   "config": {
-    "save-on-error": {
+    "gear-save-on-error": {
         "type":"boolean",
         "default": false,
         "description": "Set to 'True' to save output on error."
@@ -84,8 +56,8 @@
     },
     "fMRIName": {
             "type": "string",
-            "default": "rfMRI_REST1_RL",
-            "enum": [
+            "default": "user_defined",
+            "enum": ["user_defined",
                 "rfMRI_REST1_RL",
                 "rfMRI_REST1_LR",
                 "rfMRI_REST2_RL",
@@ -105,7 +77,7 @@
                 "tfMRI_EMOTION_RL",
                 "tfMRI_EMOTION_LR"
             ],
-            "description": "Output name for preprocessed data. This is the type, objective, and configuration of the particular fMRI scan."
+            "description": "Output name for preprocessed data. This is the type, objective, and configuration of the particular fMRI scan. user_defined default will attempt to find and use task name."
         },
         "BiasCorrection": {
             "type": "string",
@@ -143,7 +115,55 @@
                   12
               ],
               "description": "Degrees of freedom for Diffusion->Anat registration. 6 (default) = rigid body, when all data is from same scanner. 12 = full affine, recommended for 7T fMRI->3T anatomy"
-          }
+          },
+      "session_label": {
+        "optional": true,
+        "description": "[SESSION_LABEL [SESSION_LABEL ...]] Do not include 'ses-', when listing the specific session to include. If left blank, will run on all sessions.",
+        "type" : "string"
+      },
+      "stages": {
+        "default": "PreFreeSurfer FreeSurfer PostFreeSurfer fMRIVolume fMRISurface Diffusion",
+        "description": "Space-separated list of processes to run, e.g., [PostFreeSurfer fMRIVolume Diffusion]",
+        "type": "string"
+      }
   },
-  "command": "/flywheel/v0/run.py"
+  "custom": {
+    "docker-image": "flywheel/bids_hcp:0.0.1_4.3.0",
+    "gear-builder": {
+      "category": "analysis",
+      "image": "flywheel/bids_hcp:0.0.1_4.3.0"
+    },
+    "flywheel": {
+      "suite": "Human Connectome Project"
+    }
+  },
+  "description": "Runs the preprocessing steps of the Human Connectome Project Minimal Preprocessing Pipeline, described in Glasser et al. 2013. Currently this includes v4.3.0 release of PreFreeSurfer, FreeSurfer, and PostFreeSurfer pipelines. This Gear also generates some helpful QC images.",
+  "inputs": {
+    "api-key": {
+        "base": "api-key"
+    },
+    "bidsignore": {
+      "description": "A .bidsignore file to provide to the bids-validator that this gear runs before running the main command.",
+      "base": "file",
+      "optional": true
+    },
+    "FreeSurferLicense": {
+      "description": "FreeSurfer license.txt file",
+      "base": "file",
+      "optional": true
+    },
+    "gdcoeffs":{
+      "optional": true,
+      "description": "Path to gradient coefficients file",
+      "base": "file"
+    }
+  },
+
+  "label": "BIDS-based HCP Preprocessing Pipeline",
+  "license": "Other",
+  "maintainer": "Flywheel <support@flywheel.io>",
+  "name": "bids_hcp",
+  "source": "https://github.com/flywheel-apps/bids_hcp",
+  "url": "https://github.com/Washington-University/Pipelines",
+  "version": "0.0.1_4.3.0"
 }

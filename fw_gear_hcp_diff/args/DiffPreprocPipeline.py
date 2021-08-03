@@ -207,7 +207,7 @@ def build(context):
     params["PEdir"] = PEdir
     params["echospacing"] = EffectiveEchoSpacing
     params["gdcoeffs"] = GradientDistortionCoeffs
-    params["dof"] = config["AnatomyRegDOF"]
+    params["dof"] = config["Diff_AnatomyRegDOF"]
     params["b0maxbval"] = b0maxbval
     params["combine-data-flag"] = CombineDataFlag
     params["extra-eddy-arg"] = ExtraEddyArgs

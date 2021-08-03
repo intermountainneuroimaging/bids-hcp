@@ -2,8 +2,8 @@ import logging
 import os.path as op
 import subprocess as sp
 
-from bids.layout import BIDSLayout
-from bids_hcp_struct.utils.bids import run_level, validate
+from bids.layout import BIDSLayout #pybids
+from bids_hcp.utils.bids import run_level, validate, download_run_level
 from flywheel_gear_toolkit import GearToolkitContext
 from flywheel_gear_toolkit.utils.config import Config
 
@@ -38,9 +38,8 @@ class bidsInput:
         bids_dir = op.join(self.gtk_context.work_dir, "bids")
         msg = self.grab_BIDS_data()
         log.info(msg)
-        # TODO add validate={config_option for BIDS validation}
         self.layout = BIDSLayout(
-            bids_dir, validate=False, derivatives=False, absolute_paths=True
+            bids_dir, validate=self.config['gear-run-bids-validation'], derivatives=False, absolute_paths=True
         )
 
         # TODO add a session filter (These go at the end of the t1ws and t2ws calls to layout.get)
@@ -311,10 +310,15 @@ class bidsInput:
         config = self.gtk_context.config
         try:
             log.info("Downloading BIDS")
-            self.gtk_context.download_session_bids(
-                target_dir=self.gtk_context.work_dir / "bids"
+            bids_e_code = download_bids_for_runlevel(
+                self.gtk_context,
+                self.hierarchy,
+                do_validate_bids=self.config['gear-run-bids-validation']
             )
-            msg = "BIDS downloaded, but validation was not required."
+            if bids_e_code == 0:
+                msg = "BIDS download completed with no errors."
+            else:
+                msg = f'BIDS download encountered {bids_e_code} in download_bids_for_runlevel'
         except Exception as e:
             log.error(
                 f'Could not download BIDS data from {self.gtk_context.work_dir / "bids"}'
@@ -332,3 +336,13 @@ class bidsInput:
             # validate.validate_bids(self.gtk_context)
             msg = "BIDS download and validation complete."
         return msg
+
+    def update_struct_zip(self):
+        """
+        The structural stage of this gear zips the output. The functional and diffusion stages
+        (as originally written) require that zip file.
+        Args:
+            context object
+        Returns:
+            modified context object with file path to zipped structural outputs.
+        """
