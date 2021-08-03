@@ -15,7 +15,7 @@
 ## Required inputs
 1. T1-weighted anatomical volume (eg: MPRAGE), <= 1mm spatial resolution
 2. T2-weighted anatomical volume (eg: SPACE, FLAIR), <= 1mm spatial resolution
-3. FreeSurfer license.txt file  (found in <code>$FREESURFER_HOME/license.txt</code>)
+3. FreeSurfer license.txt file  (found in `$FREESURFER_HOME/license.txt`)
 
 ## Optional inputs
 1. Field map for correcting readout distortion
@@ -24,7 +24,7 @@
     * **Note 1**: If readout distortion correction is performed, user **must** specify the correct "StructualUnwarpDirection" config option.  For HCP scans (sagittal slices with A>>P phase-encoding), this should be "z", corresponding to readout in the F>>H direction.
     * Note 2: This effect is very small, at most 0.35mm in a few high-susceptibility areas (e.g., orbitofrontal)
 2. Gradient nonlinearity coefficients copied from scanner. See [FAQ 8. What is gradient nonlinearity correction?](https://github.com/Washington-University/Pipelines/wiki/FAQ#8-what-is-gradient-nonlinearity-correction)
-    * If needed, this file can be obtained from the console at <code>C:\MedCom\MriSiteData\GradientCoil\coeff.grad</code> for Siemens scanners
+    * If needed, this file can be obtained from the console at `C:\MedCom\MriSiteData\GradientCoil\coeff.grad` for Siemens scanners
     * Note: This effect is significant for HCP data collected on custom Siemens "ConnectomS" scanner, and for 7T scanners.  It is relatively minor for production 3T scanners (Siemens Trio, Prisma, etc.)
 
 ## Configuration options
@@ -35,8 +35,8 @@
 5. StructuralUnwarpDirection: Readout direction for structural scans ( 'x', 'x-', 'y', 'y-', 'z', 'z-' ). HCP default = 'z' (**Only used when providing fieldmaps to correct readout distortion**)
 
 ## Outputs
-* <code>\<subject\>\_hcpstruct.zip</code>: Zipped output directory containing complete <code>MNINonLinear/</code>, <code>T1w/</code>, and <code>T2w/</code> folders.
-* <code>\<subject\>\_hcpstruct\_QC.*.png</code>: QC images for visual inspection of output quality (details to come...)
+* `\<subject\>\_hcpstruct.zip`: Zipped output directory containing complete `MNINonLinear/`, `T1w/`, and `T2w/` folders.
+* `\<subject\>\_hcpstruct\_QC.*.png`: QC images for visual inspection of output quality (details to come...)
 * Logs (details to come...)
 
 
@@ -53,13 +53,13 @@
 2. Field map for correcting readout distortion
     * Option 1: GRE = "typical" GRE B0 field map including magnitude and phase volumes
     * Option 2: SpinEchoFieldMap = a pair of spin echo with opposite phase-encode directions ("Positive" = R>>L or P>>A, and "Negative" = L>>R or A>>P) for "TOPUP"-style distortion estimation
-3. StructZip output from the HCP-Struct gear (containing <code>T1w/</code>, <code>T2w/</code>, and <code>MNINonLinear/</code> folders)
-4. FreeSurfer license.txt file  (found in <code>$FREESURFER_HOME/license.txt</code>)
+3. StructZip output from the HCP-Struct gear (containing `T1w/`, `T2w/`, and `MNINonLinear/` folders)
+4. FreeSurfer license.txt file  (found in `$FREESURFER_HOME/license.txt`)
 
 ## Optional inputs
 1. fMRIScout: high-quality exemplar volume from fMRI time-series. If using Multi-Band for fMRI, and Single-Band reference volume is available, use SBRef. Otherwise, leave empty to first time series volume for registration.
 2. Gradient nonlinearity coefficients copied from scanner. See [FAQ 8. What is gradient nonlinearity correction?](https://github.com/Washington-University/Pipelines/wiki/FAQ#8-what-is-gradient-nonlinearity-correction)
-    * If needed, this file can be obtained from the console at <code>C:\MedCom\MriSiteData\GradientCoil\coeff.grad</code> for Siemens scanners
+    * If needed, this file can be obtained from the console at `C:\MedCom\MriSiteData\GradientCoil\coeff.grad` for Siemens scanners
     * Note: This effect is significant for HCP data collected on custom Siemens "ConnectomS" scanner, and for 7T scanners.  It is relatively minor for production 3T scanners (Siemens Trio, Prisma, etc.)
 
 ## Configuration options
@@ -70,8 +70,8 @@
 5. RegName: Surface registration to use during CIFTI resampling: either 'FS' (freesurfer) or 'MSMSulc'. ('Empty'=gear uses RegName from HCP-Structural)
 
 ## Outputs
-* <code>\<subject\>\_\<fMRIName\>\_hcpfunc.zip</code>: Zipped output directory containing <code>\<fMRIName\>/</code> and <code>MNINonLinear/Results/\<fMRIName\>/</code> folders
-* <code>\<subject\>\_\<fMRIName\>\_hcpfunc\_QC.*.png</code>: QC images for visual inspection of output quality (Distortion correction and registration to anatomy, details to come...)
+* `\<subject\>\_\<fMRIName\>\_hcpfunc.zip`: Zipped output directory containing `\<fMRIName\>/` and `MNINonLinear/Results/\<fMRIName\>/` folders
+* `\<subject\>\_\<fMRIName\>\_hcpfunc\_QC.*.png`: QC images for visual inspection of output quality (Distortion correction and registration to anatomy, details to come...)
 * Logs (details to come...)
 
 # HCP DIFF
@@ -84,18 +84,18 @@
 
 ## Required inputs
 1. Pair of diffusion scans (each including NiFTI+bvec+bval) with identical acquisitions but opposite phase-encoding (R>>L + L>>R, *or* P>>A + A>>P)
-3. StructZip output from the HCP-Struct gear (containing <code>T1w/</code>, <code>T2w/</code>, and <code>MNINonLinear/</code> folders)
-4. FreeSurfer license.txt file  (found in <code>$FREESURFER_HOME/license.txt</code>)
+3. StructZip output from the HCP-Struct gear (containing `T1w/`, `T2w/`, and `MNINonLinear/` folders)
+4. FreeSurfer license.txt file  (found in `$FREESURFER_HOME/license.txt`)
 
 ## Optional inputs
 1. Additional diffusion pairs *from the same session* (DWIPositiveData2 + DWINegativeData2, etc...)
 2. Gradient nonlinearity coefficients copied from scanner. See [FAQ 8. What is gradient nonlinearity correction?](https://github.com/Washington-University/Pipelines/wiki/FAQ#8-what-is-gradient-nonlinearity-correction)
-    * If needed, this file can be obtained from the console at <code>C:\MedCom\MriSiteData\GradientCoil\coeff.grad</code> for Siemens scanners
+    * If needed, this file can be obtained from the console at `C:\MedCom\MriSiteData\GradientCoil\coeff.grad` for Siemens scanners
     * Note: This effect is significant for HCP data collected on custom Siemens "ConnectomS" scanner, and for 7T scanners.  It is relatively minor for production 3T scanners (Siemens Trio, Prisma, etc.)
 
 ## Outputs
-* <code>\<subject\>\_\<DWIName\>\_hcpdiff.zip</code>: Zipped output directory containing <code>\<subject\>/<DWIName\>/</code> and <code>\<subject\>/T1w/<DWIName\>/</code> folders
-* <code>\<subject\>\_\<DWIName\>\_hcpdiff\_QC.*.png</code>: QC images for visual inspection of output quality (details to come...)
+* `\<subject\>\_\<DWIName\>\_hcpdiff.zip`: Zipped output directory containing `\<subject\>/<DWIName\>/` and `\<subject\>/T1w/<DWIName\>/` folders
+* `\<subject\>\_\<DWIName\>\_hcpdiff\_QC.*.png`: QC images for visual inspection of output quality (details to come...)
 * Logs (details to come...)
 
 ## Gear Release Notes
