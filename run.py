@@ -13,9 +13,10 @@ def main(gtk_context):
     # Run all the BIDS-specific downloads and config settings
     new_config = bids_file_locator.bidsInput()
     new_config.gather_bids_files()
+    gear_args = new_config.gear_args()
     # TODO figure out if the class new_config is sufficient to pass around the config.json modifications or if the final method in gather_bids_file() needs to be written to capture the "new input file"
     e_code = 0
-    if "struct" in new_config.gtk_context.config.get("stages"):
+    if "struct" in gear_args("stages"):
         e_code = struct_main.run(new_config)
 
     # Structural stage ends with zipping file. If that stage is complete, either from prior processing

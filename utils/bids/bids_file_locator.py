@@ -3,11 +3,10 @@ import os.path as op
 import subprocess as sp
 
 from bids.layout import BIDSLayout #pybids
+from bids_hcp.utils import gear_arg_utils
 from bids_hcp.utils.bids import run_level, validate, download_run_level
 from flywheel_gear_toolkit import GearToolkitContext
 from flywheel_gear_toolkit.utils.config import Config
-
-from .custom_logger import get_custom_logger
 
 log = logging.getLogger(__name__)
 
@@ -32,31 +31,44 @@ class bidsInput:
             Updated config.json file to feed into the main gear modules as if the user had input the values.
         """
 
-        bids_dir = op.join(self.gtk_context.work_dir, "bids")
+        # Populate the gear args with the configuration options right off the bat
+        self.gear_args = gear_arg_utils(self.config)
+        self.gear_args.update = gear_arg_utils(self.gtk_context.inputs)
+        self.gear_args['bids_dir'] = op.join(self.gear_args['work_dir'], 'bids')
+
+        # Download the BIDS curated data and validate here to reduce compute for faulty runs
         msg = self.grab_BIDS_data()
         log.info(msg)
+        # Use pyBIDS finder method to capture the BIDS structure for these data
         self.layout = BIDSLayout(
-            bids_dir, validate=self.config['gear-run-bids-validation'], derivatives=False, absolute_paths=True
+            bids_dir, validate=self.gear_args['gear-run-bids-validation'], derivatives=False, absolute_paths=True
         )
 
+        # Search the layout for the different modality types
         # TODO add a session filter (These go at the end of the t1ws and t2ws calls to layout.get)
+
+        # Each stage seems to require structural scans. Find them before anything else.
         self.find_t1ws()
         self.find_t2ws()
 
-        if "struct" in self.gtk_context.config["stages"]:
+        if "struct" in self.gear_args["stages"]:
             self.find_struct_fieldmaps()
-        if "func" in self.gtk_context.config["stages"]:
+        if "func" in self.gear_args["stages"]:
             self.find_func_fieldmaps()
             self.define_bolds()
-        if "diff" in self.gtk_context.config["stages"]:
+        if "diff" in self.gear_args["stages"]:
             self.find_dwis()
 
-        # TODO write a method that definitely updates the config.json
-        # Probably use .to_json from toolkit that will return a config.json
+        # For the cases where structural was initially completed and probably zipped.
+        if "struct" not in self.gear_args["stages"]:
+            # find the T1 results
+            # unzip them
+            # Set the T1 filepath for func and/or diff to use
+
 
     def find_t1ws(self):
         """
-        Locate the structural scans
+        Locate the structural scans to be processed.
         """
         self.t1ws = [
             f.path
@@ -69,27 +81,30 @@ class bidsInput:
         assert len(self.t1ws) > 0, (
             "No T1w files found for subject %s!" % self.hierarchy.subject_label
         )
-        # TODO set the context inputs["T1"] to t1ws
+        self.gear_args['struct']['raw_T1s'] = self.t1ws
 
     def find_t2ws(self):
         self.t2ws = [
             f.path for f in self.layout.get(subject=self.subject_label, suffix="T2w")
         ]
-        # TODO set the context inputs["T2"] to t2ws
+        self.gear_args['struct']['raw_T2s'] = self.t2ws
 
     def find_struct_fieldmaps(self, bids_dir):
+        if not self.t1ws:
+            self.find_t1ws()
+
         fieldmap_set = self.layout.get_fieldmap(self.t1ws[0], return_list=True)
         if fieldmap_set[0]["suffix"] == "phasediff":
             # Create Siemens style Magnitude and Phase
             merged_file = "%s/tmp/%s/magfile.nii.gz" % (
-                bids_dir,
+                self.gears_args['bids_dir'],
                 self.hierarchy.subject_label,
             )
             sp.run(
                 [
                     "mkdir",
                     "-p",
-                    op.join(bids_dir, self.hierarchy.subject_label),
+                    op.join(self.gears_args['bids_dir'], self.hierarchy.subject_label),
                     "&&",
                     "fslmerge",
                     "-t",
@@ -102,9 +117,9 @@ class bidsInput:
             phasediff_metadata = self.layout.get_metadata(fieldmap_set["phasediff"])
             te_diff = phasediff_metadata["EchoTime2"] - phasediff_metadata["EchoTime1"]
             # HCP expects TE in miliseconds
-            te_diff = te_diff * 1000.0
+            self.gear_args['struct']['te_diff'] = te_diff * 1000.0
 
-            self.config.update(
+            self.gear_args['struct'].update(
                 {
                     "fmapmag": merged_file,
                     "fmapphase": fieldmap_set["phasediff"],
@@ -114,6 +129,9 @@ class bidsInput:
             )
 
     def find_func_fieldmaps(self):
+        if not self.t1ws:
+            self.find_t1ws()
+
         fieldmap_set = self.layout.get_fieldmap(self.t1ws[0], return_list=True)
         if fieldmap_set[0]["suffix"] == "epi":
             SEPhaseNeg = None
@@ -131,7 +149,7 @@ class bidsInput:
                 "PhaseEncodingDirection"
             ]
         # TODO check if the seunwarpdir is a BIDS app or HCP arg; capitalization??
-        self.config.update(
+        self.gear_args['func'].update(
             {
                 "SEPhaseNeg": SEPhaseNeg,
                 "SEPhasePos": SEPhasePos,
@@ -143,7 +161,7 @@ class bidsInput:
         # TODO add session filter here especially
         self.bolds = [
             f.path
-            for f in layout.get(subject=self.hierarchy.subject_label, suffix="bold")
+            for f in self.layout.get(subject=self.hierarchy.subject_label, suffix="bold")
         ]
         for fmritcs in self.bolds:
             fmriname = "_".join(fmritcs.split("sub-")[-1].split("_")[1:]).split(".")[0]
@@ -173,15 +191,15 @@ class bidsInput:
             else:
                 SEPhasePos = fieldmap["epi"]
         # TODO check here for collisions in parameters too.
-        self.config.update(
+        self.gear_args['func'].update(
             {"fmriscout": fmriscout, "SEPhasePos": SEPhasePos, "SEPhaseNeg": SEPhaseNeg}
         )
 
     def find_dwis(self):
-        dwis = layout.get(subject=subject_label, suffix="dwi")
+        dwis = self.layout.get(subject=self.hierarchy.subject_label, suffix="dwi")
         numruns = set(
-            layout.get(
-                target="run", return_type="id", subject=subject_label, type="dwi"
+            self.layout.get(
+                target="run", return_type="id", subject=self.hierarchy.subject_label, type="dwi"
             )
         )
         # accounts for multiple runs, number of directions, and phase encoding directions
@@ -189,43 +207,42 @@ class bidsInput:
         # TODO figure out what is intended by looking for multiple runs
 
         if numruns:
-            for numrun in numruns:
-                if not onerun:
-                    bvals = [
-                        f.filename
-                        for f in layout.get(
-                            subject=subject_label, type="dwi", run=numrun
-                        )
-                    ]
-                else:
-                    bvals = [
-                        f.filename
-                        for f in layout.get(
-                            subject=subject_label, type="dwi", extensions=["bval"]
-                        )
-                    ]
-                ## find number of directions by reading bval files, then create dictionary with corresponding
-                # bval file name, number of directions, dwi image file name, and phase encoding direction (i or j).
-                dwi_dict = {"bvalFile": [], "bval": [], "dwiFile": [], "direction": []}
-
-                # TODO differentiate between bvec and bval, since extensions arg no longer valid
-                for bvalfile in bvals:  # find number of directions
-                    with open(bvalfile) as f:
-                        bvalues = [bvalue for line in f for bvalue in line.split()]
-                    # fill in the rest of dictionary
-                    dwi_dict["bvalFile"].append(bvalfile)
-                    dwi_dict["bval"].append(len(bvalues) - 1)
-                    dwiFile = glob(
-                        os.path.join(
-                            os.path.dirname(bvalfile),
-                            "{0}.nii*".format(os.path.basename(bvalfile).split(".")[0]),
-                        )
-                    )  # ensures bval file has same name as dwi file
-                    assert len(dwiFile) == 1
-                    dwi_dict["dwiFile"].append(dwiFile[0])
-                    dwi_dict["direction"].append(
-                        layout.get_metadata(dwiFile[0])["PhaseEncodingDirection"][0]
+            ## find number of directions by reading bval files, then create dictionary with corresponding
+            # bval file name, number of directions, dwi image file name, and phase encoding direction (i or j).
+            dwi_dict = {"bvalFile": [], "bval": [], "dwiFile": [], "direction": []}
+            if len(numruns) == 1:
+                bvals = [
+                    f.filename
+                    for f in self.layout.get(
+                        subject=self.hierarchy.subject_label, type="dwi", run=numrun
                     )
+                ]
+            else:
+                for numrun in numruns:
+                    bvals = [
+                        f.filename
+                        for f in self.layout.get(
+                            subject=self.hierarchy.subject_label, type="dwi", extensions=["bval"]
+                        )
+                    ]
+           # TODO differentiate between bvec and bval, since extensions arg no longer valid
+            for bvalfile in bvals:  # find number of directions
+                with open(bvalfile) as f:
+                    bvalues = [bvalue for line in f for bvalue in line.split()]
+                # fill in the rest of dictionary
+                dwi_dict["bvalFile"].append(bvalfile)
+                dwi_dict["bval"].append(len(bvalues) - 1)
+                dwiFile = glob(
+                    op.join(
+                        op.dirname(bvalfile),
+                        "{0}.nii*".format(op.basename(bvalfile).split(".")[0]),
+                    )
+                )  # ensures bval file has same name as dwi file
+                assert len(dwiFile) == 1
+                dwi_dict["dwiFile"].append(dwiFile[0])
+                dwi_dict["direction"].append(
+                    self.layout.get_metadata(dwiFile[0])["PhaseEncodingDirection"][0]
+                )
 
                 # check if length of lists in dictionary are the same
                 n = len(dwi_dict["bvalFile"])
@@ -272,18 +289,17 @@ class bidsInput:
                         for dwi in dwis:
                             if (
                                 "-"
-                                in layout.get_metadata(dwi)["PhaseEncodingDirection"]
+                                in self.layout.get_metadata(dwi)["PhaseEncodingDirection"]
                             ):
                                 neg = dwi
                             else:
                                 pos = dwi
 
                             echospacing = (
-                                layout.get_metadata(pos)["EffectiveEchoSpacing"] * 1000
+                                self.layout.get_metadata(pos)["EffectiveEchoSpacing"] * 1000
                             )
-                # TODO make sure there are not naming collisions in the config dict such that parameters (e.g., echospacing
-                # is overwritten from structural setup to func to diff
-                self.config.update(
+
+                self.gear_args['diff'].update(
                     {
                         "dwiname": dwiname,
                         "PEdir": PEdir,
@@ -292,6 +308,7 @@ class bidsInput:
                         "echospacing": echospacing,
                     }
                 )
+                #TODO Is the dwi_dict used?
 
     def grab_BIDS_data(self):
         """
@@ -343,3 +360,5 @@ class bidsInput:
         Returns:
             modified context object with file path to zipped structural outputs.
         """
+        pass
+

@@ -104,6 +104,7 @@ COPY manifest.json ${FLYWHEEL}/manifest.json
 COPY scripts/patch/DiffPreprocPipeline.sh /opt/HCP-Pipelines/DiffusionPreprocessing/
 
 # ENV preservation for Flywheel Engine
+# Do not remove this. utils.bids.environment depends on it and is called heavily through out suite.
 RUN python -c 'import os, json; f = open("/tmp/gear_environ.json", "w"); json.dump(dict(os.environ), f)'
 
 # Configure entrypoint
