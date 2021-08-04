@@ -8,7 +8,7 @@ import os.path as op
 import subprocess as sp
 from collections import OrderedDict
 
-from .common import build_command_list
+from flywheel.GearToolkitContext.interfaces.command_line import build_command_list
 
 
 def build(context):

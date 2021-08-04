@@ -2,7 +2,7 @@
 #
 #
 
-# Uses Ubuntu 16.04 LTS
+# Uses xenial
 FROM flywheel/hcp-base:1.0.3_4.3.0rc0
 
 LABEL maintainer="Flywheel <support@flywheel.io>"
@@ -19,18 +19,8 @@ ENV FSLDIR=/usr/share/fsl/6.0 \
     POSSUMDIR=/usr/share/fsl/6.0 \ 
     LD_LIBRARY_PATH=/usr/share/fsl/6.0/lib:$LD_LIBRARY_PATH \ 
     FSLTCLSH=/usr/bin/tclsh \ 
-    FSLWISH=/usr/bin/wish
-
-#############################################
-# Download and install Connectome Workbench 1.3.2 
-# Compatible with HCP v4.0.1
-
-ENV CARET7DIR=/opt/workbench/bin_linux64
-
-#############################################
-# Download and install HCP Pipelines
-
-# Using v4.0.1
+    FSLWISH=/usr/bin/wish \
+    CARET7DIR=/opt/workbench/bin_linux64
 
 # Set up specific environment variables for the HCP Pipeline
 ENV FSL_DIR="${FSLDIR}" \ 
@@ -65,7 +55,6 @@ RUN unset POSIXLY_CORRECT
 #############################################
 # FreeSurfer is installed in base image. Ensure environment is set
 # 6.0.1 ftp://surfer.nmr.mgh.harvard.edu/pub/dist/freesurfer/6.0.1/freesurfer-Linux-centos6_x86_64-stable-pub-v6.0.1.tar.gz
-# 5.3.0 ftp://surfer.nmr.mgh.harvard.edu/pub/dist/freesurfer/5.3.0-HCP/freesurfer-Linux-centos4_x86_64-stable-pub-v5.3.0-HCP.tar.gz
 
 # Set up the FreeSurfer environment
 ENV OS=Linux \ 
@@ -92,9 +81,19 @@ ENV OS=Linux \
 # MSM_HOCR v3 binary is installed in base image.
 ENV MSMBINDIR=${HCPPIPEDIR}/MSMBinaries
 
+# Install BIDS Validator
+RUN apt-get update &&\
+    apt-get install -y --no-install-recommends python3-pip && \
+    apt-get clean && \
+    pip install bids_validator && \
+    rm -rf /var/lib/apt/lists/*
+
 #############################################
 # Copy gear-specific utils and dependencies
 COPY utils ${FLYWHEEL}/utils
+
+#TODO make a Docker user profile with permissions to the flywheel folder for singularity analysis
+
 COPY scripts /tmp/scripts
 COPY scenes /tmp/scenes
 
@@ -102,8 +101,60 @@ COPY scenes /tmp/scenes
 COPY run.py ${FLYWHEEL}/run.py
 COPY manifest.json ${FLYWHEEL}/manifest.json
 
+# Patch from Keith Jamison's Gear. Change at your own risk.
+COPY scripts/patch/DiffPreprocPipeline.sh /opt/HCP-Pipelines/DiffusionPreprocessing/
+
 # ENV preservation for Flywheel Engine
+# Do not remove this. utils.bids.environment depends on it and is called heavily through out suite.
 RUN python -c 'import os, json; f = open("/tmp/gear_environ.json", "w"); json.dump(dict(os.environ), f)'
 
+
+# Add poetry oversight.
+RUN apt-get update && \
+	apt-get install -y \
+	software-properties-common &&\
+	add-apt-repository ppa:deadsnakes/ppa && \
+	apt-get update && \
+	apt-get install -y --no-install-recommends python3.9\
+	python3.9-venv \
+	python3-pip\
+	python3.9-dev && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install poetry based on their preferred method. pip install is finnicky.
+# Designate the install location, so that you can find it in Docker.
+ENV PYTHONUNBUFFERED=1 \
+    POETRY_VERSION=1.1.6 \
+    # make poetry install to this location
+    POETRY_HOME="/opt/poetry" \
+    # do not ask any interactive questions
+    POETRY_NO_INTERACTION=1 \
+    VIRTUAL_ENV=/opt/venv
+RUN python3.9 -m venv $VIRTUAL_ENV
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+RUN python3.9 -m pip install --upgrade pip && \
+    ln -sf /usr/bin/python3.9 /opt/venv/bin/python3
+ENV PATH="$POETRY_HOME/bin:$PATH"
+#
+## get-poetry respects ENV
+#RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python
+#
+#
+## Installing main dependencies
+#COPY pyproject.toml poetry.lock $FLYWHEEL/
+#RUN poetry install --no-dev
+#
+## Installing the current project (most likely to change, above layer can be cached)
+## Note: poetry requires a README.md to install the current project
+COPY run.py manifest.json README.md $FLYWHEEL/
+COPY fw_gear_hcp_struct $FLYWHEEL/fw_gear_hcp_struct
+COPY fw_gear_hcp_func $FLYWHEEL/fw_gear_hcp_func
+COPY fw_gear_hcp_diff $FLYWHEEL/fw_gear_hcp_diff
+COPY utils $FLYWHEEL/utils
+#RUN poetry install --no-dev
+
 # Configure entrypoint
+RUN chmod a+x $FLYWHEEL/run.py
 ENTRYPOINT ["/flywheel/v0/run.py"]
+#ENTRYPOINT ["poetry","run","python","/flywheel/v0/run.py"]

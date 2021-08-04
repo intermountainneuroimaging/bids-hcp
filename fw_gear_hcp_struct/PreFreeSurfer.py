@@ -3,14 +3,20 @@ Builds, validates, and excecutes parameters for the HCP script
 /opt/HCP-Pipelines/PreFreeSurfer/PreFreeSurferPipeline.sh
 part of the hcp-struct gear
 """
+import logging
 import os
 import os.path as op
 from collections import OrderedDict
 
+from flywheel.GearToolkitContext.interfaces.command_line import (
+    build_command_list,
+    exec_command,
+)
 from tr import tr
+
 from utils.gear_preliminaries import create_sanitized_filepath
 
-from .common import build_command_list, exec_command
+log = logging.getLogger(__name__)
 
 
 def build(context):
@@ -54,7 +60,10 @@ def build(context):
     ]
     # the parameter "--bfsigma" is not accounted for
     for p in None_Params:
-        params[p] = "NONE"
+        if p in config.keys():
+            params[p] = config[p]
+        else:
+            params[p] = "NONE"
 
     if "DwellTime" in inputs["T1"]["object"]["info"].keys():
         dwell_time = inputs["T1"]["object"]["info"]["DwellTime"]
@@ -125,7 +134,10 @@ def build(context):
         ):
             echotime1 = inputs["SiemensGREMagnitude"]["object"]["info"]["EchoTime"]
             echotime2 = inputs["SiemensGREPhase"]["object"]["info"]["EchoTime"]
-            params["echodiff"] = format((echotime2 - echotime1) * 1000.0, ".15f")
+            if not params["echodiff"]:
+                # In the case of merged magnitude files, echodiff is already calculated correctly
+                # in bids_file_locator.define_bids_files
+                params["echodiff"] = format((echotime2 - echotime1) * 1000.0, ".15f")
     # Else if TOPUP
     elif ("SpinEchoNegative" in inputs.keys()) and (
         "SpinEchoPositive" in inputs.keys()
@@ -162,7 +174,7 @@ def build(context):
                 ):
                     params["SEPhasePos"] = SpinEchoPhase2
                     params["SEPhaseNeg"] = SpinEchoPhase1
-                    context.log.warning(
+                    log.warning(
                         "SpinEcho phase-encoding directions were swapped. \
                          Continuing!"
                     )
@@ -189,14 +201,14 @@ def validate(context):
     inputs = context._invocation["inputs"]
     # Examining Brain Size
     if params["brainsize"] < 10:
-        context.log("Human Brains have a diameter larger than 1 cm!")
-        context.log("Setting to defalut of 150 mm!")
+        log("Human Brains have a diameter larger than 1 cm!")
+        log("Setting to defalut of 150 mm!")
         params["brainsize"] = 150
     # If "DwellTime" is not found in T1w/T2w, skip
     # readout distortion correction
     if (params["t1samplespacing"] == "NONE") and (params["t2samplespacing"] == "NONE"):
         if params["avgrdcmethod"] != "NONE":
-            context.log.warning(
+            log.warning(
                 '"DwellTime" tag not found. '
                 + "Proceeding without readout distortion correction!"
             )
@@ -280,5 +292,5 @@ def execute(context):
         + 'in the file "pipeline_logs.zip" upon completion.'
     )
 
-    context.log.info("PreFreeSurfer command: \n")
+    log.info("PreFreeSurfer command: \n")
     exec_command(context, command, stdout_msg=stdout_msg)

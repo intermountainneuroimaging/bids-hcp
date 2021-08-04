@@ -1,99 +1,8 @@
-{
-  "name": "hcp-struct",
-  "label": "HCP: Structural Preprocessing Pipeline",
-  "description": "Runs the structural preprocessing steps of the Human Connectome Project Minimal Preprocessing Pipeline, described in Glasser et al. 2013. Currently this includes v4.0-alpha release of PreFreeSurfer, FreeSurfer, and PostFreeSurfer pipelines. This Gear also generates some helpful QC images. NOTE: This Gear is a prerequisite for other Gears in the HCP suite.",
-  "author": "Human Connectome Project",
-  "maintainer": "Flywheel <support@flywheel.io>",
-  "license": "Other",
-  "url": "https://github.com/Washington-University/Pipelines",
-  "source": "https://github.com/flywheel-apps/hcp-struct",
+{ "author": "Human Connectome Project",
   "cite": "Glasser M. F., Sotiropoulos S. N., Wilson J. A., Coalson T. S., Fischl B., Andersson J. L., … Consortium, W. U.-M. H. (2013). The minimal preprocessing pipelines for the Human Connectome Project. NeuroImage, 80, 105–124.",
-  "version": "1.0.2_4.3.0",
-  "custom": {
-    "docker-image": "flywheel/hcp-struct:1.0.2_4.3.0",
-    "gear-builder": {
-      "category": "analysis",
-      "image": "flywheel/hcp-struct:1.0.2_4.3.0"
-    },
-    "flywheel": {
-      "suite": "Human Connectome Project"
-    }
-  },
-  "inputs": {
-    "api-key": {
-        "base": "api-key"
-    },
-    "T1": {
-      "description": "T1-weighted anatomical NIfTI file",
-      "base": "file",
-      "type": {
-        "enum": [
-          "nifti"
-        ]
-      }
-    },
-    "T2": {
-      "description": "T2-weighted anatomical NIfTI file",
-      "base": "file",
-      "type": {
-        "enum": [
-          "nifti"
-        ]
-      }
-    },
-    "FreeSurferLicense": {
-      "description": "FreeSurfer license.txt file",
-      "base": "file",
-      "optional": true
-    },
-    "GradientCoeff": {
-      "description": "Scanner gradient nonlinearity coefficient file",
-      "base": "file",
-      "optional": true
-    },
-    "SpinEchoPositive": {
-      "description": "Spin echo field map for correcting T1w and T2w (Positive phase-encode, ie: R>>L or P>>A)",
-      "base": "file",
-      "type": {
-        "enum": [
-          "nifti"
-        ]
-      },
-      "optional": true
-    },
-    "SpinEchoNegative": {
-      "description": "Spin echo field map for correcting T1w and T2w (Negative phase-encode, ie: L>>R or A>>P)",
-      "base": "file",
-      "type": {
-        "enum": [
-          "nifti"
-        ]
-      },
-      "optional": true
-    },
-    "SiemensGREMagnitude": {
-      "description": "B0 GRE field map magnitude from a Siemens scanner (Must also provide SiemensGREPhase)",
-      "base": "file",
-      "type": {
-        "enum": [
-          "nifti"
-        ]
-      },
-      "optional": true
-    },
-    "SiemensGREPhase": {
-      "description": "B0 GRE field map phase from a Siemens scanner (Must also provide SiemensGREMagnitude)",
-      "base": "file",
-      "type": {
-        "enum": [
-          "nifti"
-        ]
-      },
-      "optional": true
-    }
-  },
+  "command": "/flywheel/v0/run.py",
   "config": {
-    "save-on-error": {
+    "gear-save-on-error": {
         "type":"boolean",
         "default": false,
         "description": "Set to 'True' to save output on error."
@@ -102,11 +11,6 @@
       "type": "string",
       "description": "Subject ID (use to override session subject id)",
       "optional": true
-    },
-    "FREESURFER_LICENSE": {
-        "description": "FreeSurfer license as space-separated string.",
-        "type": "string",
-        "optional": true
     },
     "RegName": {
       "type": "string",
@@ -139,7 +43,127 @@
         "type":"boolean",
         "default": false,
         "description": "Log all commands, but do not execute."
+    },
+    "gear-run-bids-validation": {
+        "type": "boolean",
+        "default": false,
+        "description": "Run BIDS validator prior to attempting analysis."
+    },
+    "gear-abort-on-bids-error": {
+        "type": "boolean",
+        "default": false,
+        "description": "Terminate gear if BIDS errors are encountered. (No output will be generated.)"
+    },
+    "fMRIName": {
+            "type": "string",
+            "default": "user_defined",
+            "enum": ["user_defined",
+                "rfMRI_REST1_RL",
+                "rfMRI_REST1_LR",
+                "rfMRI_REST2_RL",
+                "rfMRI_REST2_LR",
+                "tfMRI_WM_RL",
+                "tfMRI_WM_LR",
+                "tfMRI_GAMBLING_RL",
+                "tfMRI_GAMBLING_LR",
+                "tfMRI_MOTOR_RL",
+                "tfMRI_MOTOR_LR",
+                "tfMRI_LANGUAGE_RL",
+                "tfMRI_LANGUAGE_LR",
+                "tfMRI_SOCIAL_RL",
+                "tfMRI_SOCIAL_LR",
+                "tfMRI_RELATIONAL_RL",
+                "tfMRI_RELATIONAL_LR",
+                "tfMRI_EMOTION_RL",
+                "tfMRI_EMOTION_LR"
+            ],
+            "description": "Output name for preprocessed data. This is the type, objective, and configuration of the particular fMRI scan. user_defined default will attempt to find and use task name."
+        },
+        "BiasCorrection": {
+            "type": "string",
+            "default": "NONE",
+            "enum": [
+                "NONE",
+                "SEBased",
+                "Legacy"
+            ],
+            "description": "Bias-field estimation method. 'NONE'(default),'SEBased', or 'Legacy'. 'SEBased'=Estimate from SpinEchoFieldMap (only possible with both Pos and Neg SpinEcho), 'Legacy'=Estimate from structural scans (only valid if structural collected in the same session, and without any subject movement)"
+        },
+        "MotionCorrection": {
+            "type": "string",
+            "default": "MCFLIRT",
+            "enum": [
+                "MCFLIRT",
+                "FLIRT"
+            ],
+            "description": "Use 'MCFLIRT' (standard FSL moco) for most acquisitions.  'FLIRT'=custom algorithm used by HCP3T internally, but not recommended for public use"
+        },
+        "Func_AnatomyRegDOF": {
+            "type": "integer",
+            "default": 6,
+            "enum": [
+                6,
+                12
+            ],
+            "description": "Degrees of freedom for fMRI->Anat registration. 6 (default) = rigid body, when all data is from same scanner. 12 = full affine, recommended for 7T fMRI->3T anatomy"
+        },
+      "Diff_AnatomyRegDOF": {
+              "type": "integer",
+              "default": 6,
+              "enum": [
+                  6,
+                  12
+              ],
+              "description": "Degrees of freedom for Diffusion->Anat registration. 6 (default) = rigid body, when all data is from same scanner. 12 = full affine, recommended for 7T fMRI->3T anatomy"
+          },
+      "session_label": {
+        "optional": true,
+        "description": "[SESSION_LABEL [SESSION_LABEL ...]] Do not include 'ses-', when listing the specific session to include. If left blank, will run on all sessions.",
+        "type" : "string"
+      },
+      "stages": {
+        "default": "PreFreeSurfer FreeSurfer PostFreeSurfer fMRIVolume fMRISurface Diffusion",
+        "description": "Space-separated list of processes to run, e.g., [PostFreeSurfer fMRIVolume Diffusion]",
+        "type": "string"
+      }
+  },
+  "custom": {
+    "docker-image": "flywheel/bids_hcp:0.0.1_4.3.0",
+    "gear-builder": {
+      "category": "analysis",
+      "image": "flywheel/bids_hcp:0.0.1_4.3.0"
+    },
+    "flywheel": {
+      "suite": "Human Connectome Project"
     }
   },
-  "command": "/flywheel/v0/run.py"
+  "description": "Runs the preprocessing steps of the Human Connectome Project Minimal Preprocessing Pipeline, described in Glasser et al. 2013. Currently this includes v4.3.0 release of PreFreeSurfer, FreeSurfer, and PostFreeSurfer pipelines. This Gear also generates some helpful QC images.",
+  "inputs": {
+    "api-key": {
+        "base": "api-key"
+    },
+    "bidsignore": {
+      "description": "A .bidsignore file to provide to the bids-validator that this gear runs before running the main command.",
+      "base": "file",
+      "optional": true
+    },
+    "FreeSurferLicense": {
+      "description": "FreeSurfer license.txt file",
+      "base": "file",
+      "optional": true
+    },
+    "gdcoeffs":{
+      "optional": true,
+      "description": "Path to gradient coefficients file",
+      "base": "file"
+    }
+  },
+
+  "label": "BIDS-based HCP Preprocessing Pipeline",
+  "license": "Other",
+  "maintainer": "Flywheel <support@flywheel.io>",
+  "name": "bids_hcp",
+  "source": "https://github.com/flywheel-apps/bids_hcp",
+  "url": "https://github.com/Washington-University/Pipelines",
+  "version": "0.0.1_4.3.0"
 }

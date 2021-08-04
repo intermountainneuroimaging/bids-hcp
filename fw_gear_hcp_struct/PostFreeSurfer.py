@@ -3,13 +3,18 @@ Builds, validates, and excecutes parameters for the HCP script
 /opt/HCP-Pipelines/PostFreeSurfer/PostFreeSurferPipeline.sh
 part of the hcp-struct gear
 """
+import logging
 import os
 import os.path as op
 import subprocess as sp
-
 from collections import OrderedDict
 
-from .common import build_command_list, exec_command
+from flywheel.GearToolkitContext.interfaces.command_line import (
+    build_command_list,
+    exec_command,
+)
+
+log = logging.getLogger(__name__)
 
 
 def build(context):
@@ -80,5 +85,5 @@ def execute(context):
         + 'in the file "pipeline_logs.zip" upon completion.'
     )
 
-    context.log.info("PostFreeSurfer command: \n")
+    log.info("PostFreeSurfer command: \n")
     exec_command(context, command, stdout_msg=stdout_msg)
