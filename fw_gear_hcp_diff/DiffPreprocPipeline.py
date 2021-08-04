@@ -14,7 +14,7 @@ from flywheel.GearToolkitContext.interfaces.command_line import (
 )
 from tr import tr
 
-from utils.diff_utils import make_sym_link
+from fw_gear_hcp_diff.diff_utils import make_sym_link
 
 log = logging.getLogger(__name__)
 

@@ -3,10 +3,8 @@ import logging
 import os
 import os.path as op
 
-import flywheel
-
-from fw_gear_hcp_diff.args import DiffPreprocPipeline, hcpdiff_qc_mosaic
-from utils import diff_utils, results
+from fw_gear_hcp_diff import DiffPreprocPipeline, hcpdiff_qc_mosaic, diff_utils
+from utils import results
 
 log = logging.getLogger(__name__)
 

@@ -3,14 +3,9 @@ import logging
 import os
 import os.path as op
 
-import flywheel
-
-from fw_gear_hcp_func.args import (
-    GenericfMRISurfaceProcessingPipeline,
-    GenericfMRIVolumeProcessingPipeline,
-    hcpfunc_qc_mosaic,
-)
-from utils import func_utils, results
+from fw_gear_hcp_func import hcpfunc_qc_mosaic, GenericfMRISurfaceProcessingPipeline, \
+    GenericfMRIVolumeProcessingPipeline, func_utils
+from utils import results
 
 log = logging.getLogger(__name__)
 

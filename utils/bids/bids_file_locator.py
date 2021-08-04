@@ -6,7 +6,6 @@ from bids.layout import BIDSLayout #pybids
 from bids_hcp.utils import gear_arg_utils
 from bids_hcp.utils.bids import run_level, validate, download_run_level
 from flywheel_gear_toolkit import GearToolkitContext
-from flywheel_gear_toolkit.utils.config import Config
 
 log = logging.getLogger(__name__)
 
@@ -41,7 +40,7 @@ class bidsInput:
         log.info(msg)
         # Use pyBIDS finder method to capture the BIDS structure for these data
         self.layout = BIDSLayout(
-            bids_dir, validate=self.gear_args['gear-run-bids-validation'], derivatives=False, absolute_paths=True
+            self.gear_args['bids_dir'], validate=self.gear_args['gear-run-bids-validation'], derivatives=False, absolute_paths=True
         )
 
         # Search the layout for the different modality types

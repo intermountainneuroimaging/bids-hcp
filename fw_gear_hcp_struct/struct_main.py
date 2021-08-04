@@ -1,16 +1,11 @@
 import os
 import logging
 
-from utils import results, struct_utils
+from utils import results
 
-from fw_gear_hcp_struct.args import (
-    FreeSurfer,
-    PostFreeSurfer,
-    PostProcessing,
-    PreFreeSurfer,
-    hcpstruct_qc_mosaic,
-    hcpstruct_qc_scenes,
-)
+from fw_gear_hcp_struct import PostProcessing, hcpstruct_qc_mosaic, FreeSurfer, PreFreeSurfer, hcpstruct_qc_scenes, \
+    PostFreeSurfer, struct_utils
+
 log = logging.getLogger(__name__)
 
 def run(context):
