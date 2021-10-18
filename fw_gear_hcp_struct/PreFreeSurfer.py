@@ -1,209 +1,109 @@
 """
-Builds, validates, and excecutes parameters for the HCP script 
+Builds, validates, and executes parameters for the HCP script
 /opt/HCP-Pipelines/PreFreeSurfer/PreFreeSurferPipeline.sh
 part of the hcp-struct gear
 """
 import logging
 import os
 import os.path as op
+import subprocess as sp
+import sys
 from collections import OrderedDict
 
-from flywheel.GearToolkitContext.interfaces.command_line import (
+from flywheel_gear_toolkit.interfaces.command_line import (
     build_command_list,
     exec_command,
 )
-from tr import tr
 
-from utils.gear_preliminaries import create_sanitized_filepath
+from utils import gear_arg_utils
 
 log = logging.getLogger(__name__)
 
 
-def build(context):
-    environ = context.gear_dict["environ"]
-    config = context.config
-    inputs = context._invocation["inputs"]
+def set_params(gear_args):
+    """
+    Collect options for the PreFreeSurfer command from manifest and acquisition files. Perform
+    basic checks, so that only likely successful configurations will be submitted for full analysis.
 
+    Params dictionary is the basis of the PreFreeSurfer command. The dictionary is basically
+    unpacked in key:value pairs to build the bash command. Therefore, the keys in the params
+    should reflect the specific option available at the commandline.
+    """
+    gear_args.processing["current_stage"] = "PreFreeSurfer"
     params = OrderedDict()
 
-    # Check for all required inputs. Necessary for API calls
-    # TODO: this should be taken care of in gear_preliminaries
+    # Determine if key input files are accessible.
     missing = []
-    for req in ["T1", "T2"]:
-        if req not in inputs.keys():
+    for req in ["t1", "t2"]:
+        if not any(req in k for k in gear_args.structural.keys()):
             missing.append(req)
     if len(missing) > 0:
-        raise Exception(
-            "Please provide the required input file(s), {}!".format(missing)
+        gear_args.common["errors"].append(
+            {
+                "message": "Missing required structural files.",
+                f"exception": "Missing: {missing}",
+            }
         )
+        log.fatal(
+            f"Unable to locate {missing} files. Will not be able to carry out analysis."
+        )
+        sys.exit(1)
 
-    params["path"] = context.work_dir
-    params["subject"] = config["Subject"]
-    params["t1"] = create_sanitized_filepath(context.get_input_path("T1"))
-    params["t2"] = create_sanitized_filepath(context.get_input_path("T2"))
+    params["path"] = gear_args.dirs["bids_dir"]
+    params["subject"] = gear_args.common["subject"]
+    if (
+        isinstance(gear_args.structural["raw_t1s"], list)
+        and len(gear_args.structural["raw_t1s"]) > 1
+    ):
+        log.info(
+            f"Found more than one T1. Using the first. Please check this is the intended action."
+        )
+    if isinstance(gear_args.structural["raw_t1s"], list):
+        params["t1"] = gear_args.structural["raw_t1s"][0]
+        params["t2"] = gear_args.structural["raw_t2s"][0]
+    else:
+        params["t1"] = gear_args.structural["raw_t1s"]
+        params["t2"] = gear_args.structural["raw_t2s"]
 
     # Pre-Fill certain parameters with "NONE"
-    None_Params = [
-        "fmapmag",
-        "fmapphase",
-        "fmapgeneralelectric",
-        "SEPhaseNeg",
-        "SEPhasePos",
-        "seechospacing",
-        "seunwarpdir",
+    none_params = [
+        "unwarp_dir",
+        "fmap_mag",
+        "fmap_phase",
+        "fmap_general_electric",
+        "SE_Phase_Neg",
+        "SE_Phase_Pos",
+        "se_echo_spacing",
+        "se_unwarp_dir",
         "echodiff",
-        "t1samplespacing",
-        "t2samplespacing",
+        "t1_sample_spacing",
+        "t2_sample_spacing",
         "gdcoeffs",
         "avgrdcmethod",
         "topupconfig",
     ]
+    # Comment from the original gear; implications unknown:
     # the parameter "--bfsigma" is not accounted for
-    for p in None_Params:
-        if p in config.keys():
-            params[p] = config[p]
+    for p in none_params:
+        # Translate names to be consistent with HCP specs
+        k = "".join(p.split("_"))
+        # Translate names to be consistent with gear_args
+        p = p.lower()
+        if p in gear_args.structural.keys():
+            params[k] = gear_args.structural[p]
+        elif p in gear_args.common.keys():
+            params[k] = gear_args.common[p]
         else:
-            params[p] = "NONE"
+            params[k] = "NONE"
 
-    if "DwellTime" in inputs["T1"]["object"]["info"].keys():
-        dwell_time = inputs["T1"]["object"]["info"]["DwellTime"]
-        # format dwell_time to 15 places
+    # format dwell_time to 15 places. DwellTime is req'd by HCP
+    dwell_time = gear_arg_utils.query_json(params["t1"], "DwellTime")
+    if dwell_time:
         params["t1samplespacing"] = format(dwell_time, ".15f")
-    if "DwellTime" in inputs["T2"]["object"]["info"].keys():
-        dwell_time = inputs["T2"]["object"]["info"]["DwellTime"]
-        # format dwell_time to 15 places
+    dwell_time = gear_arg_utils.query_json(params["t2"], "DwellTime")
+    if dwell_time:
         params["t2samplespacing"] = format(dwell_time, ".15f")
 
-    # HCP PIPE DIR Templates
-    # MNI0.7mm template
-    params["t1template"] = (
-        environ["HCPPIPEDIR_Templates"]
-        + "/MNI152_T1_"
-        + config["TemplateSize"]
-        + ".nii.gz"
-    )
-    params["t1template2mm"] = (
-        environ["HCPPIPEDIR_Templates"] + "/MNI152_T1_2mm.nii.gz"
-    )  # Brain extracted MNI0.7mm template
-    params["t1templatebrain"] = (
-        environ["HCPPIPEDIR_Templates"]
-        + "/MNI152_T1_"
-        + config["TemplateSize"]
-        + "_brain.nii.gz"
-    )
-
-    params["t2template"] = (
-        environ["HCPPIPEDIR_Templates"]
-        + "/MNI152_T2_"
-        + config["TemplateSize"]
-        + ".nii.gz"
-    )  # MNI0.7mm T2wTemplate
-    params["t2templatebrain"] = (
-        environ["HCPPIPEDIR_Templates"]
-        + "/MNI152_T2_"
-        + config["TemplateSize"]
-        + "_brain.nii.gz"
-    )  # Brain extracted MNI0.7mm T2wTemplate
-    params["t2template2mm"] = (
-        environ["HCPPIPEDIR_Templates"] + "/MNI152_T2_2mm.nii.gz"
-    )  # MNI2mm T2wTemplate
-    params["templatemask"] = (
-        environ["HCPPIPEDIR_Templates"]
-        + "/MNI152_T1_"
-        + config["TemplateSize"]
-        + "_brain_mask.nii.gz"
-    )  # Brain mask MNI0.7mm template
-    params["template2mmmask"] = (
-        environ["HCPPIPEDIR_Templates"] + "/MNI152_T1_2mm_brain_mask_dil.nii.gz"
-    )  # MNI2mm template
-    params["brainsize"] = config["BrainSize"]
-    params["fnirtconfig"] = (
-        environ["HCPPIPEDIR_Config"] + "/T1_2_MNI152_2mm.cnf"
-    )  # FNIRT 2mm T1w Config
-
-    # Parse Inputs
-    # If SiemensFieldMap
-    if ("SiemensGREMagnitude" in inputs.keys()) and (
-        "SiemensGREPhase" in inputs.keys()
-    ):
-        params["fmapmag"] = context.get_input_path("SiemensGREMagnitude")
-        params["fmapphase"] = context.get_input_path("SiemensGREPhase")
-        params["avgrdcmethod"] = "SiemensFieldMap"
-        if ("EchoTime" in inputs["SiemensGREMagnitude"]["object"]["info"].keys()) and (
-            "EchoTime" in inputs["SiemensGREPhase"]["object"]["info"].keys()
-        ):
-            echotime1 = inputs["SiemensGREMagnitude"]["object"]["info"]["EchoTime"]
-            echotime2 = inputs["SiemensGREPhase"]["object"]["info"]["EchoTime"]
-            if not params["echodiff"]:
-                # In the case of merged magnitude files, echodiff is already calculated correctly
-                # in bids_file_locator.define_bids_files
-                params["echodiff"] = format((echotime2 - echotime1) * 1000.0, ".15f")
-    # Else if TOPUP
-    elif ("SpinEchoNegative" in inputs.keys()) and (
-        "SpinEchoPositive" in inputs.keys()
-    ):
-        params["avgrdcmethod"] = "TOPUP"
-        SpinEchoPhase1 = context.get_input_path("SpinEchoPositive")
-        SpinEchoPhase2 = context.get_input_path("SpinEchoNegative")
-        # Topup config if using TOPUP, set to NONE if using regular FIELDMAP
-        params["topupconfig"] = environ["HCPPIPEDIR_Config"] + "/b02b0.cnf"
-        if (
-            "EffectiveEchoSpacing"
-            in inputs["SpinEchoPositive"]["object"]["info"].keys()
-        ):
-            SEP_object_info = inputs["SpinEchoPositive"]["object"]["info"]
-            SEN_object_info = inputs["SpinEchoNegative"]["object"]["info"]
-            seechospacing = SEP_object_info["EffectiveEchoSpacing"]
-            params["seechospacing"] = format(seechospacing, ".15f")
-
-            if ("PhaseEncodingDirection" in SEP_object_info.keys()) and (
-                "PhaseEncodingDirection" in SEN_object_info.keys()
-            ):
-                pedirSE1 = SEP_object_info["PhaseEncodingDirection"]
-                pedirSE2 = SEN_object_info["PhaseEncodingDirection"]
-                pedirSE1 = tr("ijk", "xyz", pedirSE1)
-                pedirSE2 = tr("ijk", "xyz", pedirSE2)
-                # Check SpinEcho phase-encoding directions
-                if ((pedirSE1, pedirSE2) == ("x", "x-")) or (
-                    (pedirSE1, pedirSE2) == ("y", "y-")
-                ):
-                    params["SEPhasePos"] = SpinEchoPhase1
-                    params["SEPhaseNeg"] = SpinEchoPhase2
-                elif ((pedirSE1, pedirSE2) == ("x-", "x")) or (
-                    (pedirSE1, pedirSE2) == ("y-", "y")
-                ):
-                    params["SEPhasePos"] = SpinEchoPhase2
-                    params["SEPhaseNeg"] = SpinEchoPhase1
-                    log.warning(
-                        "SpinEcho phase-encoding directions were swapped. \
-                         Continuing!"
-                    )
-                params["seunwarpdir"] = pedirSE1.replace("-", "").replace("+", "")
-    # Else if General Electric Field Map
-    elif "GeneralElectricFieldMap" in inputs.keys():
-        # TODO: how do we handle GE fieldmap? where do we get deltaTE?
-        raise Exception("Cannot currently handle GeneralElectricFieldmap!")
-
-    params["unwarpdir"] = config["StructuralUnwarpDirection"]
-    if "GradientCoeff" in inputs.keys():
-        params["gdcoeffs"] = context.get_input_path("GradientCoeff")
-
-    params["printcom"] = " "
-    context.gear_dict["PRE-params"] = params
-
-
-def validate(context):
-    """
-    Ensure that the PreFreeSurfer Parameters are valid.
-    Raise Exceptions and exit if not valid.
-    """
-    params = context.gear_dict["PRE-params"]
-    inputs = context._invocation["inputs"]
-    # Examining Brain Size
-    if params["brainsize"] < 10:
-        log("Human Brains have a diameter larger than 1 cm!")
-        log("Setting to defalut of 150 mm!")
-        params["brainsize"] = 150
     # If "DwellTime" is not found in T1w/T2w, skip
     # readout distortion correction
     if (params["t1samplespacing"] == "NONE") and (params["t2samplespacing"] == "NONE"):
@@ -213,84 +113,95 @@ def validate(context):
                 + "Proceeding without readout distortion correction!"
             )
             params["avgrdcmethod"] = "NONE"
-    # Examine Siemens Field Map input
-    if ("SiemensGREMagnitude" in inputs.keys()) and (
-        "SiemensGREPhase" in inputs.keys()
-    ):
-        if "echodiff" in params.keys():
-            if params["echodiff"] == 0:
-                raise Exception(
-                    "EchoTime1 and EchoTime2 are the same \
-                        (Please ensure Magnitude input is TE1)! Exiting."
-                )
-        else:
+
+    res_spec_templates = [
+        "t1template",
+        "t1templatebrain",
+        "t2template",
+        "t2templatebrain",
+        "templatemask",
+    ]
+    for rst in res_spec_templates:
+        # Narrow down the possible, matching template keys
+        possible = [x for x in gear_args.templates.keys() if rst in x]
+        # Select the key that matches the name of the rst being populated and the resolution (determined by template_size)
+        pick = [x for x in possible if gear_args.common["template_size"] in x]
+        params[rst] = gear_args.templates[pick[0]]
+
+    params["brain_size"] = gear_args.common["brain_size"]
+    # Examining Brain Size
+    if params["brain_size"] < 10:
+        log.info("Human Brains have a diameter larger than 1 cm!")
+        log.info("Setting to default of 150 mm!")
+        params["brain_size"] = 150
+
+    params["fnirtconfig"] = gear_args.templates["fnirt_config"]
+    # 3D acquisitions, like MPRAGE don't have PE directions in the json sidecars.
+    # This must be provided by the user.
+    params["unwarpdir"] = gear_args.structural["unwarp_dir"]
+
+    # Should have been populated to gear_args during the find_bids_files -> structural args
+    # and then passed to params earlier in this method. If not, try again here.
+    # This quantity is needed for distortion correction
+    if "echodiff" in params.keys():
+        if params["echodiff"] == 0:
             raise Exception(
-                "No EchoTime metadata found in FieldMap input file!  Exiting."
+                "EchoTime1 and EchoTime2 are the same \
+                    (Please ensure Magnitude input is TE1)! Exiting."
             )
-    # Examine TOPUP input
-    elif ("SpinEchoNegative" in inputs.keys()) and (
-        "SpinEchoPositive" in inputs.keys()
-    ):
-        if (
-            "PhaseEncodingDirection"
-            in inputs["SpinEchoPositive"]["object"]["info"].keys()
-        ) and (
-            "PhaseEncodingDirection"
-            in inputs["SpinEchoNegative"]["object"]["info"].keys()
-        ):
-            pedirSE1 = inputs["SpinEchoPositive"]["object"]["info"][
-                "PhaseEncodingDirection"
-            ]
-            pedirSE2 = inputs["SpinEchoNegative"]["object"]["info"][
-                "PhaseEncodingDirection"
-            ]
-            pedirSE1 = tr("ijk", "xyz", pedirSE1)
-            pedirSE2 = tr("ijk", "xyz", pedirSE2)
-            if pedirSE1 == pedirSE2:
-                raise Exception(
-                    "SpinEchoPositive and SpinEchoNegative have the same \
-                        PhaseEncodingDirection "
-                    + str(pedirSE1)
-                    + " !"
-                )
-            if not (
-                ((pedirSE1, pedirSE2) == ("x", "x-"))
-                or ((pedirSE1, pedirSE2) == ("y", "y-"))
-            ) and not (
-                ((pedirSE1, pedirSE2) == ("x-", "x"))
-                or ((pedirSE1, pedirSE2) == ("y-", "y"))
-            ):
-                raise Exception(
-                    "Unrecognized SpinEcho phase-encoding directions "
-                    + str(pedirSE1)
-                    + ", "
-                    + str(pedirSE2)
-                    + "."
-                )
-        else:
-            raise Exception(
-                "SpinEchoPositive or SpinEchoNegative input \
-                is missing PhaseEncodingDirection metadata!"
+        elif params["echodiff"] == "NONE":
+            log.warning("echodiff set at NONE.")
+        elif float(params["echodiff"]) < 0.1:
+            log.debug(
+                "Issue in fsl_prepare_fieldmap with incorrect echodiffs or phase ranges [6.283 radians]."
             )
-    elif "GeneralElectricFieldMap" in inputs.keys():
-        raise Exception("Cannot currently handle GeneralElectricFieldmap!")
+            log.warning(
+                f"Expecting echodiff values between 0.1 and 10.0 milliseconds.\n"
+                f'Encountered echodiff of {params["echodiff"]}.'
+            )
+    else:
+        log.error("No EchoTime metadata found in FieldMap input file!")
+        gear_args.common["errors"].append(
+            "Structural echodiff/TE did not have EchoTime metadata."
+        )
+
+    if "gdcoeffs" in gear_args.common.keys():
+        params["gdcoeffs"] = gear_args.common["gdcoeffs"]
+    # Though printcom is listed in the HCP pipeline options, the whitespace ending of the commands
+    # seemed to cause `hostname: Temporary resolution` issues throughout the package. Discarding for now.
+    # params["printcom"] = " "
+    gear_args.structural["pre_params"] = params
+    # For testing
+    return params
 
 
-def execute(context):
-    environ = context.gear_dict["environ"]
-    config = context.config
-    os.makedirs(context.work_dir + "/" + config["Subject"], exist_ok=True)
-    command = []
-    command.extend(context.gear_dict["command_common"])
-    command.append(
-        op.join(environ["HCPPIPEDIR"], "PreFreeSurfer", "PreFreeSurferPipeline.sh")
+def execute(gear_args):
+    os.makedirs(
+        op.join(gear_args.dirs["bids_dir"], gear_args.common["subject"]), exist_ok=True
     )
-    command = build_command_list(command, context.gear_dict["PRE-params"])
+    command = []
+    command.extend(gear_args.processing["common_command"])
+    command.append(gear_args.processing["PreFreeSurfer"])
+    command = build_command_list(command, gear_args.structural["pre_params"])
 
     stdout_msg = (
         "PreFreeSurfer logs (stdout, stderr) will be available "
         + 'in the file "pipeline_logs.zip" upon completion.'
     )
-
-    log.info("PreFreeSurfer command: \n")
-    exec_command(context, command, stdout_msg=stdout_msg)
+    if gear_args.fw_specific["gear_dry_run"]:
+        log.info("PreFreeSurfer command:\n{command}")
+    try:
+        exec_command(
+            command,
+            dry_run=gear_args.fw_specific["gear_dry_run"],
+            environ=gear_args.environ,
+            stdout_msg=stdout_msg,
+        )
+    except RuntimeError as e:
+        log.debug(
+            f"Checking that fsl_prepare_fieldmap is accessible:\n"
+            f'{sp.run(["ls", "-l", "/usr/share/fsl/bin/fsl_prepare_fieldmap"], env=gear_args.environ)}'
+        )
+        gear_args.common["errors"].append(
+            {"message": "DCMethod issue in PreFS.", "exception": e}
+        )

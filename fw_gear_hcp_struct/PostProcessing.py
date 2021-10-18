@@ -1,5 +1,5 @@
 """
-This module elevates "whitelisted" files to the toplevel of this gear's output
+This module elevates "safe_listed" files to the toplevel of this gear's output
 directory.  This is as specified in
 https://github.com/scitran-apps/freesurfer-recon-all/blob/master/bin/run#L206-L317.
 However, what is requested in the volume and area information of the FS output
@@ -10,19 +10,27 @@ import logging
 import os.path as op
 
 import pandas as pd
-from flywheel.GearToolkitContext.interfaces.command_line import exec_command
+from flywheel_gear_toolkit.interfaces.command_line import exec_command
 
 log = logging.getLogger(__name__)
 
 
-def build(context):
-    # TODO: Is this in gear_preliminaries?
-    context.gear_dict["whitelist"] = []
-    context.gear_dict["metadata"] = {}
+def set_params(gear_args):
+    gear_args.structural["metadata"] = {}
 
 
-def set_metadata_from_csv(context, csv_file):
-    info = context.gear_dict["metadata"]["analysis"]["info"]
+def set_metadata_from_csv(gear_args, csv_file):
+    """
+    Once the aseg_stats are available in a table format, the metadata
+    can be updated with values for various ROIs.
+    Args:
+        gear_args (GearArgs): Custom class containing relevant gear and analysis set up parameters
+        csv_file: aseg stats converted by asegstats2table from FreeSurfer
+
+    Returns:
+        updated metadata on the analysis container.
+    """
+    info = gear_args.structural["metadata"]["analysis"]["info"]
     if op.exists(csv_file):
         df = pd.read_csv(csv_file, sep=",")
         columns = df.columns
@@ -35,65 +43,91 @@ def set_metadata_from_csv(context, csv_file):
             info[seg_title][col] = df[col][0]
 
 
-def process_aseg_csv(context):
-    whitelist = context.gear_dict["whitelist"]
-    config = context.config
+def process_aseg_csv(gear_args):
+    """
+    Convert the statistical output files from FreeSurfer into tables that can be read
+    into other packages or metadata.
+    Args:
+        gear_args (GearArgs): Custom class containing relevant gear and analysis set up parameters
+    """
+    safe_list = gear_args.common["safe_list"]
     # Check for the presence of keys.
-    metadata = context.gear_dict["metadata"]
+    metadata = gear_args.structural["metadata"]
     if "analysis" not in metadata.keys():
         metadata["analysis"] = {}
 
     if "info" not in metadata["analysis"].keys():
         metadata["analysis"]["info"] = {}
 
-    tablefile = op.join(context.work_dir, config["Subject"] + "_aseg_stats_vol_mm3.csv")
+    tablefile = op.join(
+        gear_args.dirs["bids_dir"],
+        gear_args.common["subject"] + "_aseg_stats_vol_mm3.csv",
+    )
     command = [
-        "asegstats2table",
+        "python2",
+        op.join(gear_args.environ["FREESURFER_HOME"], "bin", "asegstats2table"),
         "-s",
-        config["Subject"],
+        gear_args.common["subject"],
         "--delimiter",
         "comma",
         "--tablefile=" + tablefile,
     ]
-    exec_command(context, command)
-    whitelist.append(tablefile)
-    set_metadata_from_csv(context, tablefile)
+
+    try:
+        exec_command(command, environ=gear_args.environ)
+    except Exception as e:
+        log.exception(e)
+    safe_list.append(tablefile)
+    set_metadata_from_csv(gear_args, tablefile)
 
     for hemi in ["lh", "rh"]:
         for parc in ["aparc.a2009s", "aparc"]:
             tablefile = op.join(
-                context.work_dir,
-                "{}_{}_{}_stats_area_mm2.csv".format(config["Subject"], hemi, parc),
+                gear_args.dirs["bids_dir"],
+                "{}_{}_{}_stats_area_mm2.csv".format(
+                    gear_args.common["subject"], hemi, parc
+                ),
             )
             command = [
-                "aparcstats2table",
+                "python2",
+                op.join(
+                    gear_args.environ["FREESURFER_HOME"], "bin", "aparcstats2table"
+                ),
                 "-s",
-                config["Subject"],
+                gear_args.common["subject"],
                 "--hemi=" + hemi,
                 "--delimiter=comma",
                 "--parc=" + parc,
                 "--tablefile=" + tablefile,
             ]
-            exec_command(context, command)
-            whitelist.append(tablefile)
-            set_metadata_from_csv(context, tablefile)
+            exec_command(command, environ=gear_args.environ)
+            safe_list.append(tablefile)
+            set_metadata_from_csv(gear_args, tablefile)
 
 
-def execute(context):
-    config = context.config
+def execute(gear_args):
+    """
+    Link the FreeSurfer SUBJECTS_DIR with the current subject being analyzed
+    and convert the accompanying statistical files into other formats to be
+    zipped or translated onto analysis containers.
+    """
+    subject = gear_args.common["subject"]
     # The commands below only work with this
-    # symbolic link in place
-    subject = config["Subject"]
+    # symbolic link in place b/c of the SUBJECTS_DIR arg in asegstats2table
     command = [
         "ln",
         "-s",
         "-f",
-        "{}/{}/T1w/{}".format(context.work_dir, subject, subject),
+        "{}/{}/T1w/{}".format(gear_args.dirs["bids_dir"], subject, subject),
         "/opt/freesurfer/subjects/",
     ]
-    exec_command(context, command)
+    exec_command(
+        command,
+        dry_run=gear_args.fw_specific["gear_dry_run"],
+        environ=gear_args.environ,
+    )
 
     # Process segmentation data to csv and process to metadata
-    if config["aseg_csv"]:
+    if gear_args.fw_specific["gear_dry_run"] is False:
         log.info("Exporting stats files csv...")
-        process_aseg_csv(context)
+        process_aseg_csv(gear_args)

@@ -20,16 +20,16 @@ qcmosaic2_2mm() {
   bash ${SCRIPT_DIR}/volmosaic.sh $2 $1 x 5 ${3}.png -n -s 2
 }
 
-SubjectDIR=$1
+subject_dir=$1
 DWIName=$2
 imgroot=$3
 
-#DiffRes=`${FSLDIR}/bin/fslval ${SubjectDIR}/${DWIName}/data/data pixdim1`
+#DiffRes=`${FSLDIR}/bin/fslval ${subject_dir}/${DWIName}/data/data pixdim1`
 #DiffRes=`printf "%0.2f" ${DiffRes}`
 
 #######################################################
 
-diffdir=${SubjectDIR}/${DWIName}/data
+diffdir=${subject_dir}/${DWIName}/data
 fitroot=${diffdir}/dtifit
 
 gradarg=""
@@ -48,7 +48,7 @@ ${FSLDIR}/bin/dtifit \
   --out=${fitroot} --sse ${gradarg}
 
 
-#non-diff, FA, and sse in native space
+#non-dwi, FA, and sse in native space
 qcmosaic1_2mm ${diffdir}/nodif ${imgroot}nodif
 qcmosaic1_2mm ${fitroot}_FA ${imgroot}dtifit_FA
 qcmosaic1_2mm ${fitroot}_sse ${imgroot}dtifit_sse
@@ -59,31 +59,31 @@ qctmp=${diffdir}/qctmp
 ${FSLDIR}/bin/applywarp --interp=spline \
   -i ${diffdir}/nodif \
   --premat=${diffdir}/../reg/diff2str.mat \
-  -r ${SubjectDIR}/T1w/T1w_acpc_dc_restore_brain \
+  -r ${subject_dir}/T1w/T1w_acpc_dc_restore_brain \
   -o ${qctmp} \
   --interp=spline \
- && qcmosaic2 ${SubjectDIR}/T1w/T1w_acpc_dc_restore ${qctmp} ${imgroot}reg2T1_nodif \
- && qcmosaic2 ${SubjectDIR}/T1w/ribbon ${qctmp} ${imgroot}reg2T1_nodif_fsribbon \
+ && qcmosaic2 ${subject_dir}/T1w/T1w_acpc_dc_restore ${qctmp} ${imgroot}reg2T1_nodif \
+ && qcmosaic2 ${subject_dir}/T1w/ribbon ${qctmp} ${imgroot}reg2T1_nodif_fsribbon \
  && ${FSLDIR}/bin/imrm ${qctmp}
 
 # dtifit FA in T1 space, with T1w edges overlaid
 ${FSLDIR}/bin/applywarp --interp=spline \
   -i ${fitroot}_FA \
   --premat=${diffdir}/../reg/diff2str.mat \
-  -r ${SubjectDIR}/T1w/T1w_acpc_dc_restore_brain \
+  -r ${subject_dir}/T1w/T1w_acpc_dc_restore_brain \
   -o ${qctmp} \
   --interp=spline \
- && qcmosaic2 ${SubjectDIR}/T1w/T1w_acpc_dc_restore ${qctmp} ${imgroot}reg2T1_dtifit_FA \
+ && qcmosaic2 ${subject_dir}/T1w/T1w_acpc_dc_restore ${qctmp} ${imgroot}reg2T1_dtifit_FA \
  && ${FSLDIR}/bin/imrm ${qctmp}
 
 # dtifit sse (dti residual) in T1 space, with T1w edges overlaid
 ${FSLDIR}/bin/applywarp --interp=spline \
   -i ${fitroot}_sse \
   --premat=${diffdir}/../reg/diff2str.mat \
-  -r ${SubjectDIR}/T1w/T1w_acpc_dc_restore_brain \
+  -r ${subject_dir}/T1w/T1w_acpc_dc_restore_brain \
   -o ${qctmp} \
   --interp=spline \
- && qcmosaic2 ${SubjectDIR}/T1w/T1w_acpc_dc_restore ${qctmp} ${imgroot}reg2T1_dtifit_sse \
+ && qcmosaic2 ${subject_dir}/T1w/T1w_acpc_dc_restore ${qctmp} ${imgroot}reg2T1_dtifit_sse \
  && ${FSLDIR}/bin/imrm ${qctmp}
 
 rm -f ${fitroot}_*

@@ -8,7 +8,7 @@ import os
 import os.path as op
 from collections import OrderedDict
 
-from flywheel.GearToolkitContext.interfaces.command_line import (
+from flywheel_gear_toolkit.interfaces.command_line import (
     build_command_list,
     exec_command,
 )
@@ -16,29 +16,31 @@ from flywheel.GearToolkitContext.interfaces.command_line import (
 log = logging.getLogger(__name__)
 
 
-def build(context):
-    config = context.config
+def set_params(gear_args):
     params = OrderedDict()
-    params["qc_scene_root"] = op.join(context.work_dir, config["Subject"])
-    params["fMRIName"] = config["fMRIName"]
+    params["qc_scene_root"] = op.join(
+        gear_args.dirs["bids_dir"], gear_args.common["subject"]
+    )
+    params["fMRIName"] = gear_args.functional["fmri_name"]
     # qc_image_root indicates where the images are going
     params["qc_image_root"] = op.join(
-        context.work_dir,
-        config["Subject"] + "_{}.hcp_func_QC.".format(config["fMRIName"]),
+        gear_args.dirs["bids_dir"],
+        gear_args.common["subject"]
+        + "_{}.hcp_func_QC.".format(gear_args.functional["fmri_name"]),
     )
-    context.gear_dict["QC-Params"] = params
+    gear_args.functional["qc_params"] = params
 
 
-def execute(context):
-    SCRIPT_DIR = context.gear_dict["SCRIPT_DIR"]
+def execute(gear_args):
+    SCRIPT_DIR = gear_args.dirs["script_dir"]
     command = [op.join(SCRIPT_DIR, "hcpfunc_qc_mosaic.sh")]
 
     command = build_command_list(
-        command, context.gear_dict["QC-Params"], include_keys=False
+        command, gear_args.functional["qc_params"], include_keys=False
     )
 
     command.append(">")
-    command.append(op.join(context.work_dir, "logs", "functionalqc.log"))
+    command.append(op.join(gear_args.dirs["bids_dir"], "logs", "functionalqc.log"))
 
     stdout_msg = (
         "Pipeline logs (stdout, stderr) will be available "
@@ -46,4 +48,9 @@ def execute(context):
     )
 
     log.info("Functional QC Image Generation command: \n")
-    exec_command(context, command, shell=True, stdout_msg=stdout_msg)
+    exec_command(
+        command,
+        dry_run=gear_args.fw_specific["gear_dry_run"],
+        environ=gear_args.environ,
+        stdout_msg=stdout_msg,
+    )

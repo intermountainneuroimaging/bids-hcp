@@ -1,0 +1,32 @@
+repos:
+  # Hooks for non python files
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.0.1
+    hooks:
+    - id: check-json
+    - id: check-toml
+    - id: pretty-format-json
+      args: ["--indent=2","--no-sort-keys","--autofix"]
+    - id: no-commit-to-branch           # protect main, master branch
+      args: ["--branch","master","--branch","main"]
+
+  # python related hooks
+  - repo: https://gitlab.com/flywheel-io/flywheel-apps/utils/pre-commit-hooks
+    rev: 99e2d3ce6519597a950e762a60653dc04f84e22e
+    hooks:
+      - id: isort               # sort import section
+      - id: black               # linting
+      - id: validate-manifest   # validate manifest.json
+      - id: pytest
+        entry: poetry run bash -euo pipefail -c
+          "
+          [ ! -f .env ] || . .env;
+          pytest tests
+          --color=yes
+          --cov={fw_gear_hcp_diff,fw_gear_hcp_func,fw_gear_hcp_struct,utils}
+          --cov-fail-under=${COVER:=90}
+          --cov-report=term-missing
+          --cov-report=xml:coverage.xml
+          --junitxml=junit.xml
+          -o junit_family=xunit2
+          "

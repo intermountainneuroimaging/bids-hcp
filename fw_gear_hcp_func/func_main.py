@@ -1,137 +1,143 @@
 #!/usr/bin/env python3
 import logging
-import os
 import os.path as op
+import sys
 
-from fw_gear_hcp_func import hcpfunc_qc_mosaic, GenericfMRISurfaceProcessingPipeline, \
-    GenericfMRIVolumeProcessingPipeline, func_utils
-from utils import results
+from fw_gear_hcp_func import (
+    GenericfMRISurfaceProcessingPipeline,
+    GenericfMRIVolumeProcessingPipeline,
+    func_utils,
+    hcpfunc_qc_mosaic,
+)
+from utils import helper_funcs, results
 
 log = logging.getLogger(__name__)
 
 
-def run(context):
+def run(gear_args, bids_info):
     """
-    Set up and complete the fMRIVolume and fMRISurface stages of the HCP Pipeline.
+    Set up and complete the fMRIVolume and/or fMRISurface stages of the HCP Pipeline.
+    Args:
+        gear_args (GearArgs): Custom class containing relevant gear and analysis set up parameters
+    Returns:
+        error code
     """
     # Get file list and configuration from hcp-struct zipfile
-    try:
-        hcp_struct_zip_filename = context.get_input_path("StructZip")
-        hcp_struct_list, hcp_struct_config = gear_preliminaries.preprocess_hcp_zip(
-            hcp_struct_zip_filename
-        )
-        context.gear_dict["exclude_from_output"] = hcp_struct_list
-        context.gear_dict["hcp_struct_config"] = hcp_struct_config
-    except Exception as e:
-        log.exception(e)
-        log.fatal("Invalid hcp-struct zip file.")
-        os.sys.exit(1)
+    helper_funcs.run_struct_zip_setup(gear_args)
 
-    # Ensure the subject_id is set in a valid manner
-    # (api, config, or hcp-struct config)
-    try:
-        gear_preliminaries.set_subject(context)
-    except Exception as e:
-        log.exception(e)
-        log.fatal(
-            "The Subject ID is not valid. Examine and try again.",
+    for i, fmri_name in enumerate(gear_args.functional["fmri_names"]):
+        gear_args.functional["fmri_name"] = fmri_name
+        gear_args.functional["fmri_timecourse"] = gear_args.functional[
+            "fmri_timecourse_all"
+        ][i]
+        gear_args.functional["fmri_scout"] = gear_args.functional["fmri_scouts_all"][i]
+        # Add distortion correction information
+        gear_args.functional.update(
+            helper_funcs.dcmethods(gear_args, bids_info.layout, "functional")
         )
-        os.sys.exit(1)
+        # Some hcp-func specific output parameters:
+        gear_args.common["output_zip_name"] = op.join(
+            gear_args.dirs["output_dir"],
+            "{}_{}_hcpfunc.zip".format(
+                gear_args.common["subject"], gear_args.functional["fmri_name"]
+            ),
+        )
 
-    # ##########################################################################
-    # #################Build and Validate Parameters############################
-    # Doing as much parameter checking before ANY computation.
-    # Fail as fast as possible.
+        if "Volume" in gear_args.common["stages"]:
+            log.debug("Building and running fMRI Volume pipeline.")
+            run_fmri_vol(gear_args)
+
+        if "Surface" in gear_args.common["stages"]:
+            log.debug("Building and running fMRI Surface pipeline.")
+            run_fmri_surf(gear_args)
+
+        # Generate HCP-Functional QC Images
+        if gear_args.fw_specific["gear_dry_run"] is False:
+            run_func_qc(gear_args)
+    return 0
+
+
+def run_fmri_vol(gear_args):
+    """
+    fMRIVolume stage setup and execution.
+    """
 
     try:
         # Build and validate from Volume Processing Pipeline
-        GenericfMRIVolumeProcessingPipeline.build(context)
-        GenericfMRIVolumeProcessingPipeline.validate(context)
+        GenericfMRIVolumeProcessingPipeline.set_params(gear_args)
     except Exception as e:
         log.exception(e)
-        log.fatal("Validating Parameters for the fMRI Volume Pipeline Failed!")
-        os.sys.exit(1)
+        log.error("Failed to build parameters for the fMRI Volume Pipeline!")
+        gear_args.common["errors"].append(
+            {
+                "message": "Setting fMRIVol params",
+                "exception": "Failed to build parameters for the fMRI Volume Pipeline!",
+            }
+        )
+    # Save configurations
+    (
+        gear_args.common["output_config"],
+        gear_args.common["output_config_filename"],
+    ) = func_utils.configs_to_export(gear_args)
+    if not gear_args.common["errors"]:
+        try:
+            GenericfMRIVolumeProcessingPipeline.execute(gear_args)
+        except Exception as e:
+            if gear_args.fw_specific["gear_save_on_error"]:
+                results.cleanup(gear_args)
+            gear_args.common["errors"].append(
+                {"message": "Executing fMRIVol", "exception": e}
+            )
+            log.exception(e)
+            log.fatal("The fMRI Volume Pipeline Failed!")
+            sys.exit(1)
 
+
+def run_fmri_surf(gear_args):
     try:
         # Build and validate from Surface Processign Pipeline
-        GenericfMRISurfaceProcessingPipeline.build(context)
+        GenericfMRISurfaceProcessingPipeline.set_params(gear_args)
     except Exception as e:
         log.exception(e)
         log.fatal("Validating Parameters for the fMRI Surface Pipeline Failed!")
-        os.sys.exit(1)
-
-    ###########################################################################
-    # Unzip hcp-struct results
-    try:
-        gear_preliminaries.unzip_hcp(context, hcp_struct_zip_filename)
-    except Exception as e:
-        log.exception(e)
-        log.fatal("Unzipping hcp-struct zipfile failed!")
-        os.sys.exit(1)
-
-    # ##########################################################################
-    # ##################Execute HCP Pipelines ##################################
-    # Some hcp-func specific output parameters:
+        gear_args.common["errors"].append(
+            {"message": "Setting fMRISurf params", "exception": e}
+        )
+    # Save configurations
     (
-        context.gear_dict["output_config"],
-        context.gear_dict["output_config_filename"],
-    ) = func_utils.configs_to_export(context)
+        gear_args.functional["output_config"],
+        gear_args.functional["output_config_filename"],
+    ) = func_utils.configs_to_export(gear_args)
+    if not gear_args.common["errors"]:
+        # Execute fMRI Surface Pipeline
+        try:
+            GenericfMRISurfaceProcessingPipeline.execute(gear_args)
+        except Exception as e:
+            if gear_args.fw_specific["gear_save_on_error"]:
+                results.cleanup(gear_args)
+            gear_args.common["errors"].append(
+                {"message": "Executing fMRISurf", "exception": e}
+            )
+            log.exception(e)
+            log.fatal("The fMRI Surface Pipeline Failed!")
+            sys.exit(1)
 
-    context.gear_dict["output_zip_name"] = op.join(
-        context.output_dir,
-        "{}_{}_hcpfunc.zip".format(
-            context.config["Subject"], context.config["fMRIName"]
-        ),
-    )
 
-    context.gear_dict["remove_files"] = func_utils.remove_intermediate_files
-    ###########################################################################
-    # Pipelines common commands
-    QUEUE = ""
-    LogFileDirFull = op.join(context.work_dir, "logs")
-    os.makedirs(LogFileDirFull, exist_ok=True)
-    FSLSUBOPTIONS = "-l " + LogFileDirFull
+def run_func_qc(gear_args):
+    """
+    Sends parameters to shell scripts that generate quality control images.
 
-    command_common = [
-        op.join(context.gear_dict["environ"]["FSLDIR"], "bin", "fsl_sub"),
-        FSLSUBOPTIONS,
-    ]
-
-    context.gear_dict["command_common"] = command_common
-
-    # Execute fMRI Volume Pipeline
+    Returns:
+        png files: subject-derived results are overlaid on template images.
+    """
     try:
-        GenericfMRIVolumeProcessingPipeline.execute(context)
+        hcpfunc_qc_mosaic.set_params(gear_args)
+        hcpfunc_qc_mosaic.execute(gear_args)
     except Exception as e:
         log.exception(e)
-        log.fatal("The fMRI Volume Pipeline Failed!")
-        if context.config["gear-save-on-error"]:
-            results.cleanup(context)
-        os.sys.exit(1)
-
-    # Execute fMRI Surface Pipeline
-    try:
-        GenericfMRISurfaceProcessingPipeline.execute(context)
-    except Exception as e:
-        log.exception(e)
-        log.fatal("The fMRI Surface Pipeline Failed!")
-        if context.config["gear-save-on-error"]:
-            results.cleanup(context)
-        os.sys.exit(1)
-
-    # Generate HCP-Functional QC Images
-    try:
-        hcpfunc_qc_mosaic.build(context)
-        hcpfunc_qc_mosaic.execute(context)
-    except Exception as e:
-        log.exception(e)
-        log.fatal("HCP Functional QC Images has failed!")
-        if context.config["gear-save-on-error"]:
-            results.cleanup(context)
-        exit(1)
-
-    ###########################################################################
-    # Clean-up and output prep
-    results.cleanup(context)
-
-    return os.sys.exit(0)
+        log.error("HCP Functional QC Images has failed!")
+        if gear_args.fw_specific["gear_save_on_error"]:
+            results.cleanup(gear_args)
+        gear_args.common["errors"].append(
+            {"message": "Func QC did not run properly", "exception": e}
+        )
