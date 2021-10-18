@@ -20,48 +20,48 @@ qcmosaic2_2mm() {
 }
 
 
-SubjectDIR=$1
+subject_dir=$1
 fMRIName=$2
 imgroot=$3
 
 #set -x
 
 # anat-res, EPI-to-T1acpc volume with high-res T1 edges
-qcmosaic2 ${SubjectDIR}/T1w/T1w_acpc_dc_restore ${SubjectDIR}/${fMRIName}/Scout2T1w ${imgroot}acpc_T1
+qcmosaic2 ${subject_dir}/T1w/T1w_acpc_dc_restore ${subject_dir}/${fMRIName}/Scout2T1w ${imgroot}acpc_T1
 
-#qcmosaic2 ${SubjectDIR}/T1w/ribbon ${SubjectDIR}/${fMRIName}/Scout2T1w ${imgroot}acpc_T1ribbon
+#qcmosaic2 ${subject_dir}/T1w/ribbon ${subject_dir}/${fMRIName}/Scout2T1w ${imgroot}acpc_T1ribbon
 
 # EPI-res, final MNI registration with low-res T1 edges (match either 2mm or 1.6mm)
-qcmosaic2_2mm ${SubjectDIR}/${fMRIName}/T1w_restore.*.nii.gz ${SubjectDIR}/${fMRIName}/${fMRIName}_SBRef_nonlin ${imgroot}mni2mm_T1
+qcmosaic2_2mm ${subject_dir}/${fMRIName}/T1w_restore.*.nii.gz ${subject_dir}/${fMRIName}/${fMRIName}_SBRef_nonlin ${imgroot}mni2mm_T1
 
 # EPI-res, final MNI space, temporal mean
 qctmp="qctmp"
-${FSLDIR}/bin/fslmaths ${SubjectDIR}/MNINonLinear/Results/${fMRIName}/${fMRIName} -Tmean ${qctmp} \
+${FSLDIR}/bin/fslmaths ${subject_dir}/MNINonLinear/Results/${fMRIName}/${fMRIName} -Tmean ${qctmp} \
   && qcmosaic1_2mm ${qctmp} ${imgroot}mni2mm_mean \
   && ${FSLDIR}/bin/imrm $qctmp
 
 # EPI-res, final MNI space, temporal std dev
-${FSLDIR}/bin/fslmaths ${SubjectDIR}/MNINonLinear/Results/${fMRIName}/${fMRIName} -Tstd ${qctmp} \
+${FSLDIR}/bin/fslmaths ${subject_dir}/MNINonLinear/Results/${fMRIName}/${fMRIName} -Tstd ${qctmp} \
   && qcmosaic1_2mm ${qctmp} ${imgroot}mni2mm_stdev \
   && ${FSLDIR}/bin/imrm $qctmp
 
 # Show EPI before and after distortion correction (to confirm correction was applied properly)
-dcdirname=${SubjectDIR}/${fMRIName}/DistortionCorrectionAndEPIToT1wReg_FLIRTBBRAndFreeSurferBBRbased
+dcdirname=${subject_dir}/${fMRIName}/DistortionCorrectionAndEPIToT1wReg_FLIRTBBRAndFreeSurferBBRbased
 qcfile_epiToT1_linear=${dcdirname}/epiToT1_linear.nii.gz
 qcfile_epiToT1_corrected=${dcdirname}/epiToT1_corrected.nii.gz
 
 ${FSLDIR}/bin/applywarp --interp=spline \
   -i ${dcdirname}/FieldMap/SBRef.nii.gz \
   --premat=${dcdirname}/fMRI2str.mat \
-  -r ${SubjectDIR}/T1w/T1w_acpc_dc_restore_brain.nii.gz \
+  -r ${subject_dir}/T1w/T1w_acpc_dc_restore_brain.nii.gz \
   -o ${qcfile_epiToT1_linear} \
- && qcmosaic2 ${SubjectDIR}/T1w/T1w_acpc_dc_restore ${qcfile_epiToT1_linear} ${imgroot}epi2T1_uncorrected \
+ && qcmosaic2 ${subject_dir}/T1w/T1w_acpc_dc_restore ${qcfile_epiToT1_linear} ${imgroot}epi2T1_uncorrected \
  && rm -f ${qcfile_epiToT1_linear}
 
 ${FSLDIR}/bin/applywarp --interp=spline \
   -i ${dcdirname}/FieldMap/SBRef_dc.nii.gz \
   --premat=${dcdirname}/fMRI2str.mat \
-  -r ${SubjectDIR}/T1w/T1w_acpc_dc_restore_brain.nii.gz \
+  -r ${subject_dir}/T1w/T1w_acpc_dc_restore_brain.nii.gz \
   -o ${qcfile_epiToT1_corrected} \
- && qcmosaic2 ${SubjectDIR}/T1w/T1w_acpc_dc_restore ${qcfile_epiToT1_corrected} ${imgroot}epi2T1_corrected \
+ && qcmosaic2 ${subject_dir}/T1w/T1w_acpc_dc_restore ${qcfile_epiToT1_corrected} ${imgroot}epi2T1_corrected \
  && rm -f ${qcfile_epiToT1_corrected}

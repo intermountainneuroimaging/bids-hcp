@@ -1,77 +1,191 @@
+"""Validate BIDS data structure.
+
+Call validate_bids() to run the bids-validator on BIDS formatted
+data.  This will log the results and report errors and warnings.
+If you want more control, call call_validate_bids() instead which
+will return an error code and the complete bids validator output
+as a dictionary.
+
+Install the command-line version of the BIDS Validator into container by adding
+this to Dockerfile, e.g.:
+
+    .. code-block:: console
+
+        RUN npm install -g bids-validator@1.3.8
+
+Example:
+    .. code-block:: python
+
+        from pathlib import Path
+        import flywheel
+
+        bids_path = Path(context.work_dir)/'bids'
+
+        # download BIDS data...
+
+        # validate
+        err_code = validate_bids(bids_path)
+
+        if err_code > 0:
+            log.exception('Error in BIDS download and validation.')
+            # do not bother processing BIDS data
+
+        else:
+            # process BIDS data...
+
+    See validate_bids() below for an example of calling call_validate_bids().
+"""
+
 import json
 import logging
-import os.path as op
 import pprint
 import subprocess as sp
 
 log = logging.getLogger(__name__)
 
 
-def validate_bids(gtk_context):
-    """Run BIDS Validator on bids_dir
-    Install BIDS Validator into container with:
-        RUN npm install -g bids-validator
-    This prints a summary of files that are valid,
-    and then lists errors and warnings.
-    Then it exits if gear-abort-on-bids-error is set and
-    if there are any errors.
-    The config MUST contain both of these:
-        gear-run-bids-validation
-        gear-abort-on-bids-error
-    """
-    try:
-        # Call the essences of bids-client's utils.validate_bids, but with stdout
-        # and not needing to install bids-client
-        bids_dir = op.join(gtk_context.work_dir, "bids")
-        # Update to python based bids_validator solution.
-        # command = [
-        #     "bids-validator",
-        #     "--verbose",
-        #     "--json",
-        #     bids_dir,
-        # ]
-        # log.info(" Command:" + " ".join(command))
-        # result = sp.run(
-        #     command, stdout=sp.PIPE, stderr=sp.PIPE, universal_newlines=True
-        # )
-        # log.info(" {} return code: ".format(command) + str(result.returncode))
-        # bids_output = json.loads(result.stdout)
-        # log.debug(f"BIDS validator error: {result.stderr}")
+def call_validate_bids(bids_path, out_path):
+    """Call command-line version of the bids validator.
 
-        # show summary of valid BIDS stuff
-        log.info(
-            " bids-validator results:\n\nValid BIDS files summary:\n"
+    Use this function if you want to parse the bids output yourself.
+    Otherwise, call validate_bids() below and it will add a description
+    of the results to the log.
+
+    Args:
+        bids_path (str): path to top directory of BIDS data.
+        out_path (pathlib path): full path and name of json formatted output
+            file that will be produced when BIDS validation is run.  If you
+            want the gear to return this file, write it to the output/
+            directory.  If you want to process this file inside the gear
+            and don't want to save it (like validate_bids() does below),
+            write it into the work/ directory.
+
+    Returns:
+
+        tuple: Two values:
+
+            * err_code (int): zero if no error.
+
+            * bids_output (dict): The results of bids validation.
+
+            `bids_output` contains a summary of the bids data present
+            and a list of errors and warnings (if any).
+    """
+
+    log.debug("Running BIDS Validator")
+
+    command = ["bids-validator", "--verbose", "--json", str(bids_path)]
+    msg = "Command: " + " ".join(command)
+    log.info(msg)
+
+    try:
+        with open(out_path, "w") as f:
+            result = sp.run(
+                command, stdout=f, stderr=sp.PIPE, universal_newlines=True, check=True
+            )
+
+    except sp.CalledProcessError as err:
+        log.error(repr(err))
+        result = sp.CompletedProcess
+        result.returncode = err.returncode
+
+    log.info(f"{command[0]} return code: {result.returncode}")
+
+    # read validation result file to get results as dictionary
+    try:
+        with open(out_path) as jfp:
+            bids_output = json.load(jfp)
+
+    except json.JSONDecodeError as err:  # in case non-json in output
+        log.error(repr(err))
+        with open(out_path) as jfp:
+            bids_output = jfp.read()
+        log.error('bids output = "%s"', bids_output)
+        result = sp.CompletedProcess
+        result.returncode = 1
+
+    return result.returncode, bids_output
+
+
+def show_errors_and_warnings(bids_output):
+    """Show what is in BIDS validation output"""
+
+    # show summary of valid BIDS stuff
+    if "summary" in bids_output:
+        msg = (
+            "bids-validator results:\n\nValid BIDS files summary:\n"
             + pprint.pformat(bids_output["summary"], indent=8)
             + "\n"
         )
+        log.info(msg)
 
+    # show all errors
+    for err in bids_output["issues"]["errors"]:
+        err_msg = err["reason"] + "\n"
+        for ff in err["files"]:
+            if ff["file"]:
+                err_msg += "      In file " + ff["file"]["relativePath"]
+            if "evidence" in ff and ff["evidence"]:
+                err_msg += ", " + ff["evidence"] + "\n"
+            else:
+                err_msg += "\n"
+        log.error(err_msg)
+
+    # show all warnings
+    for warn in bids_output["issues"]["warnings"]:
+        warn_msg = warn["reason"] + "\n"
+        for ff in warn["files"]:
+            if ff["file"]:
+                warn_msg += "      " + ff["file"]["relativePath"] + "\n"
+        log.warning(warn_msg)
+
+
+def validate_bids(bids_path):
+    """Run BIDS Validator on provided bids_path.
+
+    This calls the bids validator and then prints a summary of files
+    that are valid, and then lists errors and warnings.  It returns
+    non-zero if there was an error.
+
+    Args:
+        bids_path (path): path to top directory of BIDS data.
+
+    Returns:
+        int: err_code
+            0 if no error,
+            1.. something less than 10, the error code returned by the validator
+            12 if there was a KeyError,
+            11 if the validator could not run at all, or
+            10 if there were any BIDS errors detected.
+
+    Note: more info on BIDS Validator return codes can be had here:
+    https://github.com/bids-standard/bids-validator/blob/master/bids-validator/cli.js
+    """
+
+    num_bids_errors = -1  # impossible value
+
+    out_path = bids_path / ".." / "validator.output.json"
+
+    err_code, bids_output = call_validate_bids(bids_path, out_path)
+
+    try:
         num_bids_errors = len(bids_output["issues"]["errors"])
-        if num_bids_errors > 0:
-            log.error("BIDS validation errors were found.")
-            for err in bids_output["issues"]["errors"]:
-                log.error("%s: %s", err["key"], err["reason"])
-            raise Exception(
-                " {} BIDS validation errors ".format(num_bids_errors)
-                + "were detected: NOT running command."
-            )
 
-        # show all warnings
-        for warn in bids_output["issues"]["warnings"]:
-            warn_msg = warn["reason"] + "\n"
-            for ff in warn["files"]:
-                if ff["file"]:
-                    warn_msg += "       {}\n".format(ff["file"]["relativePath"])
-            log.warning(" " + warn_msg)
+        show_errors_and_warnings(bids_output)
 
-        # NOTE: C-PAC runs its own bids validator that does
-        # not report until the end of cpac execution
-    except Exception as e:
-        log.fatal(
-            "Cannot download and validate bids.",
-        )
-        log.exception(e)
-        if gtk_context.config["gear-abort-on-bids-error"]:
-            return 1
-            # There is no cleanup after this errors out or not.
-            # We exit the program. Without validated bids, we
-            # cannot proceed.
+    except TypeError as ter:
+        log.critical(str(repr(ter)), exc_info=True)
+        err_code = 12
+
+    if num_bids_errors < 0:
+        log.debug("BIDS validation could not run.")
+        err_code = 11
+
+    elif num_bids_errors > 0:
+        err_code = 10
+        log.error("%d BIDS validation error(s) were detected.", num_bids_errors)
+
+    else:
+        log.debug("No BIDS errors detected.")
+
+    return err_code

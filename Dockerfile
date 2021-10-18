@@ -2,22 +2,38 @@
 #
 #
 
-# Uses xenial
+# Uses focal 20.04 LTS
 FROM flywheel/hcp-base:1.0.3_4.3.0rc0
 
 LABEL maintainer="Flywheel <support@flywheel.io>"
 
+# Remove expired LetsEncrypt cert
+RUN rm /usr/share/ca-certificates/mozilla/DST_Root_CA_X3.crt && \
+    update-ca-certificates
+ENV REQUESTS_CA_BUNDLE "/etc/ssl/certs/ca-certificates.crt"
+
+# Install BIDS Validator
+RUN apt-get update && \
+    curl -sL https://deb.nodesource.com/setup_10.x | bash - && \
+    apt-get install -y \
+    zip \
+    nodejs \
+    tree && \
+    rm -rf /var/lib/apt/lists/* && \
+    npm install -g bids-validator@1.5.7
+
+
 #############################################
-# FSL 6.0.1 is a part of the base image.  Update the environment variables
+# FSL 6.0.4 is a part of the base image.  Update the environment variables
 
 # Configure FSL environment
-ENV FSLDIR=/usr/share/fsl/6.0 \ 
+ENV FSLDIR=/usr/share/fsl \ 
     FSL_DIR="${FSLDIR}" \ 
-    FSLOUTPUTTYPE=NIFTI_GZ \ 
-    PATH=/usr/share/fsl/6.0/bin:$PATH \ 
+    FSLOUTPUTTYPE=NIFTI_GZ \
+    PATH=/usr/share/fsl/bin:$PATH \ 
     FSLMULTIFILEQUIT=TRUE \ 
-    POSSUMDIR=/usr/share/fsl/6.0 \ 
-    LD_LIBRARY_PATH=/usr/share/fsl/6.0/lib:$LD_LIBRARY_PATH \ 
+    POSSUMDIR=/usr/share/fsl \ 
+    LD_LIBRARY_PATH=/usr/share/fsl/lib:$LD_LIBRARY_PATH \ 
     FSLTCLSH=/usr/bin/tclsh \ 
     FSLWISH=/usr/bin/wish \
     CARET7DIR=/opt/workbench/bin_linux64
@@ -72,7 +88,7 @@ ENV OS=Linux \
     FMRI_ANALYSIS_DIR=/opt/freesurfer/fsfast \ 
     PERL5LIB=/opt/freesurfer/mni/lib/perl5/5.8.5 \ 
     MNI_PERL5LIB=/opt/freesurfer/mni/lib/perl5/5.8.5 \ 
-    PATH=/opt/freesurfer/bin:/opt/freesurfer/fsfast/bin:/opt/freesurfer/tktools:/opt/freesurfer/mni/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH
+    PATH=/opt/workbench/bin_linux64:/opt/freesurfer/bin:/opt/freesurfer/fsfast/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/share/fsl/bin:/usr/share/fsl/fslpython/envs/fslpython:/opt/freesurfer/tktools:/opt/freesurfer/mni/bin:$PATH
 
 #############################################
 # Gradient unwarp script is installed in base image. 
@@ -81,28 +97,16 @@ ENV OS=Linux \
 # MSM_HOCR v3 binary is installed in base image.
 ENV MSMBINDIR=${HCPPIPEDIR}/MSMBinaries
 
-# Install BIDS Validator
-RUN apt-get update &&\
-    apt-get install -y --no-install-recommends python3-pip && \
-    apt-get clean && \
-    pip install bids_validator && \
-    rm -rf /var/lib/apt/lists/*
-
-#############################################
-# Copy gear-specific utils and dependencies
-COPY utils ${FLYWHEEL}/utils
-
-#TODO make a Docker user profile with permissions to the flywheel folder for singularity analysis
-
-COPY scripts /tmp/scripts
-COPY scenes /tmp/scenes
-
-# Copy executable/manifest to Gear
-COPY run.py ${FLYWHEEL}/run.py
-COPY manifest.json ${FLYWHEEL}/manifest.json
-
 # Patch from Keith Jamison's Gear. Change at your own risk.
 COPY scripts/patch/DiffPreprocPipeline.sh /opt/HCP-Pipelines/DiffusionPreprocessing/
+# Patch the wb_command?
+RUN ln -s /opt/workbench/bin_linux64/wb_command /opt/workbench/wb_command
+
+## Fix libz error
+#RUN ln -s -f /lib/x86_64-linux-gnu/libz.so.1.2.11 /opt/workbench/libs_linux64/libz.so.1
+#
+## Fix libstdc++6 error
+#RUN ln -sf /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.24 /opt/matlab/v92/sys/os/glnxa64/libstdc++.so.6
 
 # ENV preservation for Flywheel Engine
 # Do not remove this. utils.bids.environment depends on it and is called heavily through out suite.
@@ -136,15 +140,18 @@ ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 RUN python3.9 -m pip install --upgrade pip && \
     ln -sf /usr/bin/python3.9 /opt/venv/bin/python3
 ENV PATH="$POETRY_HOME/bin:$PATH"
-#
-## get-poetry respects ENV
-#RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python
-#
-#
-## Installing main dependencies
-#COPY pyproject.toml poetry.lock $FLYWHEEL/
-#RUN poetry install --no-dev
-#
+
+# get-poetry respects ENV
+RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python
+
+
+# Installing main dependencies
+COPY pyproject.toml poetry.lock $FLYWHEEL/
+RUN poetry install --no-dev
+
+COPY scripts /tmp/scripts
+COPY scenes /tmp/scenes
+
 ## Installing the current project (most likely to change, above layer can be cached)
 ## Note: poetry requires a README.md to install the current project
 COPY run.py manifest.json README.md $FLYWHEEL/
@@ -152,9 +159,10 @@ COPY fw_gear_hcp_struct $FLYWHEEL/fw_gear_hcp_struct
 COPY fw_gear_hcp_func $FLYWHEEL/fw_gear_hcp_func
 COPY fw_gear_hcp_diff $FLYWHEEL/fw_gear_hcp_diff
 COPY utils $FLYWHEEL/utils
-#RUN poetry install --no-dev
 
 # Configure entrypoint
-RUN chmod a+x $FLYWHEEL/run.py
-ENTRYPOINT ["/flywheel/v0/run.py"]
-#ENTRYPOINT ["poetry","run","python","/flywheel/v0/run.py"]
+RUN chmod a+x $FLYWHEEL/run.py && \
+    echo "hcp-gear" > /etc/hostname && \
+    rm -rf $HOME/.npm
+
+ENTRYPOINT ["poetry","run","python","/flywheel/v0/run.py"]

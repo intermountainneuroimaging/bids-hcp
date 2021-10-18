@@ -10,295 +10,157 @@ import os.path as op
 import re
 from collections import OrderedDict
 
-from flywheel.GearToolkitContext.interfaces.command_line import (
+import nibabel
+from flywheel_gear_toolkit.interfaces.command_line import (
     build_command_list,
     exec_command,
 )
-from tr import tr
-
-from utils.gear_preliminaries import create_sanitized_filepath
 
 log = logging.getLogger(__name__)
 
 
-def build(context):
-    config = context.config
-    inputs = context._invocation["inputs"]
-    environ = context.gear_dict["environ"]
-
+def set_params(gear_args):
+    """
+    Sets up the fMRIVolume configuration. Note that the params
+    dictionary keys match with HCP pipeline commandline options, so
+    the names should be retained.
+    Args:
+        gear_args (GearArgs): Custom class containing relevant gear and analysis set up parameters
+    """
+    gear_args.common["current_stage"] = "fMRIVolume"
     params = OrderedDict()
 
     # Initialize parameters.
-    # 'unwarpdir' must be correctly derived from metadata
-    params["unwarpdir"] = ""
+    # Explicitly rename the scripted labels that do not follow gear_args' names
+    params["fmritcs"] = gear_args.functional["fmri_timecourse"]
+
     # use "FLIRT" to run FLIRT-based mcflirt_acc.sh, or "MCFLIRT" to
     # run MCFLIRT-based mcflirt.sh
     params["mctype"] = "MCFLIRT"
     # Initialize "NONE"s
-    None_Params = [
+    none_params = [
         "echodiff",
-        "echospacing",
+        "echo_spacing",
         "dcmethod",
-        "fmapgeneralelectric",
-        "SEPhaseNeg",
-        "SEPhasePos",
-        "fmapmag",
-        "fmapphase",
-        "fmriscout",
-        "biascorrection",
+        "topupconfig",
+        "fmap_general_electric",
+        "fmap_mag",
+        "fmap_phase",
+        "fmri_scout",
+        "SE_Phase_Neg",
+        "SE_Phase_Pos",
+        "bias_correction",
+        "unwarp_dir",
         "gdcoeffs",
+        "fmri_name",
     ]
-    for key in None_Params:
-        params[key] = "NONE"
 
-    params["path"] = context.work_dir
+    for p in none_params:
+        # Translate names to be consistent with HCP specs
+        k = "".join(p.split("_"))
+        # Translate names to be consistent with gear_args
+        p = p.lower()
+        if p in gear_args.functional.keys():
+            params[k] = gear_args.functional[p]
+        elif p in gear_args.common.keys():
+            params[k] = gear_args.common[p]
+        else:
+            params[k] = "NONE"
+
+    params["path"] = gear_args.dirs["bids_dir"]
     # The subject may have three different ways to be set:
     # 1) UI 2) hcp-struct.json zip 3) container
     # this is set in utils/gear_preliminaries.py:set_subject.
-    params["subject"] = config["Subject"]
-    params["fmriname"] = config["fMRIName"]
-    params["fmritcs"] = context.get_input_path("fMRITimeSeries")
+    params["subject"] = gear_args.common["subject"]
 
-    # TODO: confirm parameters match fMRITimeSeries?
-    if "fMRIScout" in inputs.keys():
-        params["fmriscout"] = create_sanitized_filepath(
-            context.get_input_path("fMRIScout")
-        )
+    zooms = (
+        nibabel.load(gear_args.functional["fmri_timecourse"]).get_header().get_zooms()
+    )
+    params["fmrires"] = str(int(min(zooms[:3])))
+    # If the zooms are unreliable for some reason, the original code had the following line.
+    #    params["fmrires"] = "2"
+    params["dof"] = gear_args.functional["dof"]
 
-    # Read necessary acquisition params from fMRI
-    obj = inputs["fMRITimeSeries"]["object"]
-    if "EffectiveEchoSpacing" in obj["info"].keys():
-        params["echospacing"] = obj["info"]["EffectiveEchoSpacing"]
+    if "temporalfilter" in gear_args.functional.keys():
+        params["temporalfilter"] = gear_args.functional["temporalfilter"]
+    else:
+        params["temporalfilter"] = 200  # HCP default
 
-    if "PhaseEncodingDirection" in obj["info"].keys():
-        params["unwarpdir"] = tr("ijk", "xyz", obj["info"]["PhaseEncodingDirection"])
+    if "gdcoeffs" in gear_args.common.keys():
+        params["gdcoeffs"] = gear_args.common["gdcoeffs"]
 
-    # TODO: **??config option??** #generally "2", but "1.60" an option
-    params["fmrires"] = "2"
+    # params["printcom"] = " "
 
-    params["biascorrection"] = config["BiasCorrection"]
+    gear_args.functional["vol_params"] = params
 
-    params["mctype"] = config["MotionCorrection"]
-
-    params["dof"] = config["Func_AnatomyRegDOF"]
-
-    # Parse Inputs
-    # If SiemensFieldMap
-    if ("SiemensGREMagnitude" in inputs.keys()) and (
-        "SiemensGREPhase" in inputs.keys()
-    ):
-        params["fmapmag"] = create_sanitized_filepath(
-            context.get_input_path("SiemensGREMagnitude")
-        )
-        params["fmapphase"] = create_sanitized_filepath(
-            context.get_input_path("SiemensGREPhase")
-        )
-        params["dcmethod"] = "SiemensFieldMap"
-        params["topupconfig"] = "NONE"
-
-        if ("EchoTime" in inputs["SiemensGREMagnitude"]["object"]["info"].keys()) and (
-            "EchoTime" in inputs["SiemensGREPhase"]["object"]["info"].keys()
-        ):
-            echotime1 = inputs["SiemensGREMagnitude"]["object"]["info"]["EchoTime"]
-            echotime2 = inputs["SiemensGREPhase"]["object"]["info"]["EchoTime"]
-            params["echodiff"] = (echotime2 - echotime1) * 1000.0
-            params["echodiff"] = format(params["echodiff"], ".15f")
-    # Else if TOPUP
-    elif ("SpinEchoNegative" in inputs.keys()) and (
-        "SpinEchoPositive" in inputs.keys()
-    ):
-        params["dcmethod"] = "TOPUP"
-        SpinEchoPhase1 = create_sanitized_filepath(
-            context.get_input_path("SpinEchoPositive")
-        )
-        SpinEchoPhase2 = create_sanitized_filepath(
-            context.get_input_path("SpinEchoNegative")
-        )
-        # Topup config if using TOPUP, set to NONE if using regular FIELDMAP
-        params["topupconfig"] = environ["HCPPIPEDIR_Config"] + "/b02b0.cnf"
-        if (
-            "PhaseEncodingDirection"
-            in inputs["SpinEchoPositive"]["object"]["info"].keys()
-        ) and (
-            "PhaseEncodingDirection"
-            in inputs["SpinEchoNegative"]["object"]["info"].keys()
-        ):
-            pedirSE1 = inputs["SpinEchoPositive"]["object"]["info"][
-                "PhaseEncodingDirection"
-            ]
-            pedirSE2 = inputs["SpinEchoNegative"]["object"]["info"][
-                "PhaseEncodingDirection"
-            ]
-            pedirSE1 = tr("ijk", "xyz", pedirSE1)
-            pedirSE2 = tr("ijk", "xyz", pedirSE2)
-
-            pedirfMRI_plane = re.sub(r"[+-]", "", params["unwarpdir"])
-
-            # NOT USED: pedirSE_plane = re.sub(r'[+-]','', pedirSE1)
-
-            # Check SpinEcho phase-encoding directions
-            if ((pedirfMRI_plane, pedirSE1, pedirSE2) == ("x", "x", "x-")) or (
-                (pedirfMRI_plane, pedirSE1, pedirSE2) == ("y", "y", "y-")
-            ):
-                params["SEPhasePos"] = SpinEchoPhase1
-                params["SEPhaseNeg"] = SpinEchoPhase2
-            elif ((pedirfMRI_plane, pedirSE1, pedirSE2) == ("x", "x-", "x")) or (
-                (pedirfMRI_plane, pedirSE1, pedirSE2) == ("y", "y-", "y")
-            ):
-                params["SEPhasePos"] = SpinEchoPhase2
-                params["SEPhaseNeg"] = SpinEchoPhase1
-                log.warning(
-                    "SpinEcho phase-encoding directions were swapped. \
-                        Continuing!"
-                )
-            # The following parameter is not used.
-            # params['seunwarpdir'] = pedirSE_plane
-        else:
-            raise Exception(
-                "The 'PhaseEncodingDirection' field not found in the "
-                + "'SpinEchoPositive' or 'SpinEchoPositive' Inputs."
-            )
-    # Else if General Electric Field Map
-    elif "GeneralElectricFieldMap" in inputs.keys():
-        # TODO: how do we handle GE fieldmap? where do we get deltaTE?
-        raise Exception("Cannot currently handle GeneralElectricFieldmap!")
-
-    if "GradientCoeff" in inputs.keys():
-        params["gdcoeffs"] = create_sanitized_filepath(
-            context.get_input_path("GradientCoeff")
-        )
-
-    params["printcom"] = " "
-
-    context.gear_dict["Vol-params"] = params
-
-
-def validate(context):
-    """
-    Ensure that the fMRI Volume Processing Parameters are valid.
-    Raise Exceptions and exit if not valid.
-    """
-
-    params = context.gear_dict["Vol-params"]
-    inputs = context._invocation["inputs"]
-
-    # A Distortion Correction method is reauired for fMRI Volume Processing
-    if params["dcmethod"] == "NONE":
-        raise Exception(
+    # A Distortion Correction method is required for fMRI Volume Processing
+    if params["dcmethod"].upper() == "NONE":
+        log.error(
             'Distortion Correction must be either "TOPUP" or '
             + '"SiemensFieldMap" to proceed with fMRI Volume Processing.'
             + "Please provide valid Spin Echo Positive/Negative or "
             + "Siemens GRE Phase/Magnitude field maps."
         )
+        gear_args.common["errors"].append(
+            {
+                "message": "Setting fMRIVol params",
+                "exception": 'Distortion Correction must be either "TOPUP" or '
+                + '"SiemensFieldMap" to proceed with fMRI Volume Processing.'
+                + "Please provide valid Spin Echo Positive/Negative or "
+                + "Siemens GRE Phase/Magnitude field maps.",
+            }
+        )
 
     # Ensure that SE-Based BiasCorrection is only used with TOPUP
     # Distortion Correction
-    if (params["dcmethod"] != "TOPUP") and (params["biascorrection"] == "SEBased"):
-        raise Exception(
+    if (params["dcmethod"].upper() != "TOPUP") and (
+        params["biascorrection"].lower() == "sebased"
+    ):
+        log.error(
             "SE-Based BiasCorrection only available when "
             + "providing Pos and Neg SpinEchoFieldMap scans"
         )
-
-    # Make sure that the user has not tried to use ">1 CASE":
-    # "^" is the exclusive or (XOR) operator
-    if not (
-        (
-            ("SpinEchoNegative" in inputs.keys())
-            and ("SpinEchoPositive" in inputs.keys())
+        gear_args.common["errors"].append(
+            {
+                "message": "fMRIVol Distortion Correction",
+                "exception": "SE-Based BiasCorrection only available when "
+                + "providing Pos and Neg SpinEchoFieldMap scans",
+            }
         )
-        ^ (
-            ("SiemensGREMagnitude" in inputs.keys())
-            and ("SiemensGREPhase" in inputs.keys())
-        )
-    ):
-        raise Exception(
-            "Please use only one of Siemens Field Map, TopUp, or "
-            + "General Electric Field Map."
-        )
-    # Examine Siemens Field Map input
-    elif ("SiemensGREMagnitude" in inputs.keys()) and (
-        "SiemensGREPhase" in inputs.keys()
-    ):
 
-        if params["echodiff"] == 0:
-            raise Exception(
-                "EchoTime1 and EchoTime2 are the same \
-                    (Please ensure Magnitude input is TE1)! Exiting."
-            )
-        elif params["echodiff"] == "NONE":
-            raise Exception(
-                "No EchoTime metadata found in FieldMap input file!  Exiting."
-            )
-    # Examine TOPUP input
-    elif ("SpinEchoNegative" in inputs.keys()) and (
-        "SpinEchoPositive" in inputs.keys()
-    ):
-        if (
-            "PhaseEncodingDirection"
-            in inputs["SpinEchoPositive"]["object"]["info"].keys()
-        ) and (
-            "PhaseEncodingDirection"
-            in inputs["SpinEchoNegative"]["object"]["info"].keys()
-        ):
-            pedirSE1 = inputs["SpinEchoPositive"]["object"]["info"][
-                "PhaseEncodingDirection"
-            ]
-            pedirSE2 = inputs["SpinEchoNegative"]["object"]["info"][
-                "PhaseEncodingDirection"
-            ]
-            pedirSE1 = tr("ijk", "xyz", pedirSE1)
-            pedirSE2 = tr("ijk", "xyz", pedirSE2)
-            if pedirSE1 == pedirSE2:
-                raise Exception(
-                    "SpinEchoPositive and SpinEchoNegative have the same \
-                        PhaseEncodingDirection "
-                    + str(pedirSE1)
-                    + " !"
-                )
+    # Ensure that Distortion correction has a configuration file.
+    if (params["dcmethod"].upper() == "TOPUP") and not params["topupconfig"]:
+        log.error("Must have TOPUP configuration file.")
+        gear_args.common["errors"].append("fMRI Vol needs TOPUP config.")
 
-            pedirfMRI_plane = re.sub(r"[+-]", "", params["unwarpdir"])
-
-            # Check SpinEcho phase-encoding directions
-            if not (
-                ((pedirfMRI_plane, pedirSE1, pedirSE2) == ("x", "x", "x-"))
-                or ((pedirfMRI_plane, pedirSE1, pedirSE2) == ("y", "y", "y-"))
-                or ((pedirfMRI_plane, pedirSE1, pedirSE2) == ("x", "x-", "x"))
-                or ((pedirfMRI_plane, pedirSE1, pedirSE2) == ("y", "y-", "y"))
-            ):
-                raise Exception(
-                    "SpinEcho phase-encoding directions "
-                    + "({},{}) ".format(pedirSE1, pedirSE2)
-                    + "invalid or do not match fMRI acquisition "
-                    + "plane ({}).".format(pedirfMRI_plane)
-                )
-
-    elif "GeneralElectricFieldMap" in inputs.keys():
-        raise Exception("Cannot currently handle GeneralElectricFieldmap!")
+    if (params["dcmethod"].upper() == "TOPUP") and not params["unwarpdir"]:
+        log.error("unwarpdir undefined for TOPUP fMRI Distortion Correction")
+    # For testing
+    return params
 
 
-def execute(context):
+def execute(gear_args):
     # We want to take care of delivering the directory structure right away
     # when we unzip the hcp-struct zip
-    environ = context.gear_dict["environ"]
-    config = context.config
-    os.makedirs(context.work_dir + "/" + config["Subject"], exist_ok=True)
+    os.makedirs(
+        op.join(gear_args.dirs["bids_dir"], gear_args.common["subject"]), exist_ok=True
+    )
 
     # Start by building command to execute
     command = []
-    command.extend(context.gear_dict["command_common"])
-    command.append(
-        op.join(
-            environ["HCPPIPEDIR"],
-            "fMRIVolume",
-            "GenericfMRIVolumeProcessingPipeline.sh",
-        )
-    )
-    command = build_command_list(command, context.gear_dict["Vol-params"])
+    command.extend(gear_args.processing["common_command"])
+    command.append(gear_args.processing["fMRIVolume"])
+    command = build_command_list(command, gear_args.functional["vol_params"])
 
     stdout_msg = (
         "Pipeline logs (stdout, stderr) will be available "
         + 'in the file "pipeline_logs.zip" upon completion.'
     )
-
-    log.info("GenericfMRIVolumeProcessingPipeline command: \n")
-    exec_command(context, command, stdout_msg=stdout_msg)
+    if gear_args.fw_specific["gear_dry_run"]:
+        log.info("GenericfMRIVolumeProcessingPipeline command: \n")
+    exec_command(
+        command,
+        dry_run=gear_args.fw_specific["gear_dry_run"],
+        environ=gear_args.environ,
+        stdout_msg=stdout_msg,
+    )

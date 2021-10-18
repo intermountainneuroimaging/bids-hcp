@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""A robust template for accessing BIDS formatted data.
-Module part of bids_app_template."""
+"""A robust template for accessing BIDS formatted data."""
 
 import json
 import logging
+import os.path as op
 import shutil
+from glob import glob
 from pathlib import Path
 
 from flywheel import ApiException
@@ -202,7 +203,10 @@ def download_bids_for_runlevel(
                     hierarchy["run_label"],
                 )
 
-                if Path(bids_dir).exists():  # This happens during testing
+                reqd_dirs = list_reqd_folders(folders)
+                folders, check_dirs = list_existing_dirs(folders, bids_dir)
+
+                if len(check_dirs) >= len(reqd_dirs):  # This happens during testing
                     bids_path = bids_dir
                     log.info(f"Not actually downloading it because {bids_dir} exists")
                 else:
@@ -217,9 +221,6 @@ def download_bids_for_runlevel(
                         for k, v in hierarchy.items()
                         if "session" in k and v is not None
                     ]
-                    # Add a session filter, if user provided subset
-                    if hasattr(gtk_context.config,'session_label'):
-                        sessions = [s for s in sessions if s in gtk_context.config['session_label']]
 
                     bids_path = gtk_context.download_project_bids(
                         src_data=src_data,
@@ -347,3 +348,45 @@ def download_bids_for_runlevel(
         )
 
     return err_code
+
+
+def list_reqd_folders(folders):
+    """
+    Produce the complete list of folders that are required to be present
+    for a BIDS analysis. This method is implemented specifically to avoid
+    incomplete downloads.
+    Args:
+        folders (list): the subset of folders to be ignored during the download
+
+    Returns:
+        final_set (list): the set of folders that must be downloaded to produce
+        the analysis.
+    """
+    std_set = ["anat", "func", "dwi", "fmap"]
+    final_set = [x for x in std_set if x not in folders]
+    return final_set
+
+
+def list_existing_dirs(folders, bids_dir):
+    """
+    Find the existing folders in the BIDS working directory to insure that all
+    associated files are downloaded, but extra re-downloading is avoided.
+    Args:
+        folders (list): the subset of folders to be ignored during the download
+        bids_dir (path): The BIDS working directory
+
+    Returns:
+        folders (list): updated list to pass to download_bids_dir to exclude from
+                        download
+        check_dirs (list): Any directories matching the required directory labels.
+    """
+
+    reqd_dirs = list_reqd_folders(folders)
+    check_dirs = []
+    for rd in reqd_dirs:
+        if glob(op.join(bids_dir, "**", rd), recursive=True):
+            check_dirs.append(glob(op.join(bids_dir, "**", rd), recursive=True))
+            # Add to the exclusion list, so the data is not re-downloaded
+            folders.append(rd)
+    folders = list(set(folders))
+    return folders, check_dirs

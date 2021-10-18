@@ -1,5 +1,5 @@
 """
-This module ecapsulates functionality that is used in preparing and saving the
+This module encapsulates functionality that is used in preparing and saving the
 output of a gear. Some reorganization may make it more "universal"
 """
 import glob
@@ -17,56 +17,54 @@ log = logging.getLogger(__name__)
 # # Clean-up and prepare outputs
 
 
-def save_config(context):
+def save_config(gear_args):
     """
-    save_config Uses the 'output_config' and 'output_config_filename' ecapsulated in the
-    gear_dict to save selected values from the gear config to the working
+    save_config uses the 'output_config' and 'output_config_filename' encapsulated in
+    gear_args.common to save selected values from the analysis configuration to the working
     directory of the gear (/flywheel/v0/work).
 
-
     Args:
-        context (flywheel.gear_context.GearContext): The gear context object
-            containing the 'gear_dict' dictionary attribute with keys/values,
+        gear_args: Must contain each of the following attributes with keys/values.
+        (Set by "configs_to_export" in each "*_utils.py".)
             'output_config': A configuration dictionary created for downstream
                 gears in the HCP pipeline
             'output_config_filename': The absolute filepath to use for the above
     """
-    config = (context.gear_dict["output_config"],)
-    config_filename = context.gear_dict["output_config_filename"]
+    config = gear_args.common["output_config"]
+    config_filename = gear_args.common["output_config_filename"]
     with open(config_filename, "w") as f:
         json.dump(config, f, indent=4)
 
 
-def preserve_whitelist_files(context):
+def preserve_safe_list_files(gear_args):
     """
-    preserve_whitelist_files Copies the files listed in the 'whitelist' gear_dict key
+    preserve_safe_list_files copies the files listed in the 'safe_list' gear_args.common key
     directly to the output directory.  These files are to be presented directly to
     the user as well as compressed into the output zipfile.
 
     Args:
-        context (flywheel.gear_context.GearContext): The gear context object
-            containing the 'gear_dict' dictionary attribute with keys/values,
-            'whitelist': a list of working directory files to place directly in
+        gear_args: contains 'commom' attribute with keys/values,
+            'safe_list': a list of working directory files to place directly in
                 the output directory
             'dry-run': a boolean parameter indicating whether or not to perform
             this under a 'dry-run' scenario
     """
 
-    for fl in context.gear_dict["whitelist"]:
-        if not context.gear_dict["dry-run"]:
+    if not gear_args.fw_specific["gear_dry_run"]:
+        for fl in gear_args.common["safe_list"]:
             log.info("Copying file to output: %s", fl)
-            shutil.copy(fl, context.output_dir)
+            shutil.copy(fl, gear_args.dirs["output_dir"])
 
 
-def zip_output(context):
+def zip_output(gear_args):
     """
-    zip_output Compresses the complete output of the gear 
+    zip_output Compresses the complete output of the gear
     (in /flywheel/v0/workdir/<Subject>)
     and places it in the output directory to be catalogued by the application.
     Only compresses files if 'dry-run' is set to False.
 
     Args:
-        context (flywheel.gear_context.GearContext): The gear context object
+        gear_args: The gear context object
             containing the 'gear_dict' dictionary attribute with keys/values,
             'dry-run': Boolean key indicating whether to actually compress or not
             'output_zip_name': output zip file to host the output
@@ -74,25 +72,23 @@ def zip_output(context):
             (e.g. hcp-struct files)
     """
 
-    config = context.config
+    outputzipname = gear_args.common["output_zip_name"]
 
-    outputzipname = context.gear_dict["output_zip_name"]
-
-    if "exclude_from_output" in context.gear_dict.keys():
-        exclude_from_output = context.gear_dict["exclude_from_output"]
+    if "exclude_from_output" in gear_args.common.keys():
+        exclude_from_output = gear_args.common["exclude_from_output"]
     else:
         exclude_from_output = []
 
     log.info("Zipping output file %s", outputzipname)
-    if not context.gear_dict["dry-run"]:
+    if not gear_args.fw_specific["gear_dry_run"]:
         try:
             os.remove(outputzipname)
         except Exception as e:
             pass
 
-        os.chdir(context.work_dir)
+        os.chdir(gear_args.dirs["bids_dir"])
         outzip = ZipFile(outputzipname, "w", ZIP_DEFLATED)
-        for root, _, files in os.walk(config["Subject"]):
+        for root, _, files in os.walk(gear_args.common["subject"]):
             for fl in files:
                 fl_path = op.join(root, fl)
                 # only if the file is not to be excluded from output
@@ -101,19 +97,19 @@ def zip_output(context):
         outzip.close()
 
 
-def zip_pipeline_logs(context):
+def zip_pipeline_logs(gear_args):
     """
     zip_pipeline_logs Compresses files in
-    '/flywheel/v0/work/logs' to '/flywheel/v0/output/pipeline_logs.zip'
+    '/flywheel/v0/work/bids/logs' to '/flywheel/v0/output/pipeline_logs.zip'
 
     Args:
-        context (flywheel.gear_context.GearContext): A gear context object
+        gear_args: A gear context object
             leveraged for the location of the "working" and "output"
             directories of the log files.
     """
 
     # zip pipeline logs
-    logzipname = op.join(context.output_dir, "pipeline_logs.zip")
+    logzipname = op.join(gear_args.dirs["output_dir"], "pipeline_logs.zip")
     log.info("Zipping pipeline logs to %s", logzipname)
 
     try:
@@ -121,73 +117,101 @@ def zip_pipeline_logs(context):
     except Exception as e:
         pass
 
-    os.chdir(context.work_dir)
+    os.chdir(gear_args.dirs["bids_dir"])
     logzipfile = ZipFile(logzipname, "w", ZIP_DEFLATED)
     for root, _, files in os.walk("logs"):
+        log.debug(f"Found logs in {root}")
         for fl in files:
             logzipfile.write(os.path.join(root, fl))
 
 
-def export_metadata(context):
+def export_metadata(gear_args):
     """
-    export_metadata  If metadata exists (in gear_dict) for this gear write to the
+    If metadata exists (in gear_dict) for this gear write to the
     application. The flywheel sdk is used to write the metadata to the
     destination/analysis object. Another manner to commit this information to the
     application database is to write the dictionary to a '.metadata' file in
     /flywheel/v0/output.
 
     Args:
-        context (flywheel.gear_context.GearContext): The gear context object
+        gear_args: The gear context object
             containing the 'gear_dict' dictionary attribute with keys/values,
             'metadata': key that was initialized in
             utils.args.PostProcessing.{build,set_metadata_from_csv}.  If the
             'analysis' subkey is not present, this is an indicator that
             PostProcessing was not executed.
     """
-
-    # Write Metadata to Analysis Object
-    if "analysis" in context.gear_dict["metadata"].keys():
-        info = context.gear_dict["metadata"]["analysis"]["info"]
-        # if this metadata is not empty
-        if len(info.keys()) > 0:
-            # TODO: The below is a work around until we get the .metadata.json
-            # file functionality working
-            # Initialize the flywheel client
-            fw = context.client
-            analysis_id = context.destination["id"]
-            # Update metadata
-            analysis_object = fw.get(analysis_id)
-            analysis_object.update_info(info)
+    if "surfer" in gear_args.common["current_stage"].lower():
+        metadata = gear_args.structural
+    elif "fmri" in gear_args.common["current_stage"].lower():
+        metadata = gear_args.functional
     else:
-        log.warn("PostProcessing has not been executed!")
+        metadata = gear_args.diffusion
+    # Write Metadata to Analysis Object
+    if ("analysis" in metadata) and (len(metadata["analysis"]["info"]) > 0):
+        try:
+            with open(
+                op.join(gear_args.dirs["output_dir"], ".metadata.json"), "w"
+            ) as fff:
+                json.dump(metadata, fff)
+            log.info(f"Wrote op.join(gear_args.dirs['output_dir'], '.metadata.json')")
+        except TypeError as e:
+            log.exception(e)
+    else:
+        log.info("No data available to save in .metadata.json.")
 
 
-def cleanup(context):
+def cleanup(gear_args):
     """
     cleanup is used to complete all of the functions in 'results' and offer a simple
     interface for the main script to do so.
 
     Args:
-        context (flywheel.gear_context.GearContext): The gear context object
+        gear_args: The gear context object
             containing the 'gear_dict' dictionary attribute with keys/values
             utilized in the called helper functions.
     """
 
     # Move all images to output directory
-    png_files = glob.glob(context.work_dir + "/*.png ")
+    png_files = glob.glob(op.join(gear_args.dirs["bids_dir"], "*.png "))
     for fl in png_files:
-        shutil.copy(fl, context.output_dir + "/")
+        shutil.copy(fl, gear_args.dirs["output_dir"] + "/")
 
-    save_config(context)
-    zip_output(context)
-    zip_pipeline_logs(context)
-    preserve_whitelist_files(context)
-    export_metadata(context)
+    save_config(gear_args)
+    zip_output(gear_args)
+    zip_pipeline_logs(gear_args)
+    preserve_safe_list_files(gear_args)
+    export_metadata(gear_args)
+    create_error_log(gear_args)
     # List final directory to log
     log.info("Final output directory listing: \n")
-    os.chdir(context.output_dir)
+    os.chdir(gear_args.dirs["output_dir"])
     duResults = sp.Popen(
         "du -hs *", shell=True, stdout=sp.PIPE, stderr=sp.PIPE, universal_newlines=True
     )
     stdout, _ = duResults.communicate()
     log.info("\n %s", stdout)
+
+
+def create_error_log(gear_args):
+    """Create a log message summarizing the errors and a log of all the arguments used in the
+    analysis.
+    Args:
+         gear_args: The gear context object
+         containing the 'gear_dict' dictionary attribute with keys/values
+         utilized in the called helper functions.
+    """
+    if len(gear_args.common["errors"]) > 0:
+        log.info(
+            f"Encountered {len(gear_args.common['errors'])} error(s) during set_params routines. Please check the logs and correct the issues before re-running."
+        )
+    if gear_args.common["errors"]:
+        log.debug(f'Errors were:\n{gear_args.common["errors"]}')
+
+    log.info(
+        "Logging gear_args as output. Please consult logs particularly to make\n"
+        "sure that all necessary files were located and placed in the \n"
+        "appropriate modality configurations."
+    )
+    with open(op.join(gear_args.dirs["output_dir"], "gear_arg.json"), "w") as fp:
+        json.dump(gear_args, fp)

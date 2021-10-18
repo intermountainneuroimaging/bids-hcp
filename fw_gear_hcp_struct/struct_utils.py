@@ -5,12 +5,14 @@ import os.path as op
 import subprocess as sp
 
 
-def get_freesurfer_version(context):
+def get_freesurfer_version(gear_args):
     """
     This function returns the version of freesurfer used.
     This is need to determine which HCP/FreeSurfer.sh to run.
+    Args:
+        gear_args (GearArgs): Custom class containing relevant gear and analysis set up parameters
     """
-    environ = context.gear_dict["environ"]
+    environ = gear_args.environ
     command = ["freesurfer --version"]
     result = sp.Popen(
         command,
@@ -27,28 +29,32 @@ def get_freesurfer_version(context):
     return version
 
 
-def configs_to_export(context):
+def configs_to_export(gear_args):
     """
-    Export HCP Functional Pipeline configuration into the Subject directory
+    Export HCP Functional Pipeline configuration into the subject directory
     Return the config and filename
+    Args:
+        gear_args (GearArgs): Custom class containing relevant gear and analysis set up parameters
     """
     config = {}
     hcpstruct_config = {"config": config}
     for key in [
-        "RegName",
-        "Subject",
-        "GrayordinatesResolution",
-        "GrayordinatesTemplate",
-        "HighResMesh",
-        "LowResMesh",
+        "reg_name",
+        "subject",
+        "grayordinates_resolution",
+        "grayordinates_template",
+        "high_res_mesh",
+        "low_res_mesh",
     ]:
-        if key in context.config.keys():
-            config[key] = context.config[key]
+        if key in gear_args.structural.keys():
+            config[key] = gear_args.structural[key]
+        elif key in gear_args.common.keys():
+            config[key] = gear_args.common[key]
 
     hcpstruct_config_filename = op.join(
-        context.work_dir,
-        context.config["Subject"],
-        "{}_hcpstruct_config.json".format(context.config["Subject"]),
+        gear_args.dirs["bids_dir"],
+        gear_args.common["subject"],
+        "sub-" + "{}_hcpstruct_config.json".format(gear_args.common["subject"]),
     )
 
     return hcpstruct_config, hcpstruct_config_filename

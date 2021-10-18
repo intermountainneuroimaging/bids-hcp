@@ -3,54 +3,65 @@ Builds, validates, and excecutes parameters for the HCP helper script
 /tmp/scripts/hcpstruct_qc_mosaic.sh
 part of the hcp-struct gear
 """
+import logging
 import os.path as op
 import subprocess as sp
 from collections import OrderedDict
 
+log = logging.getLogger(__name__)
 
-def build(context):
-    environ = context.gear_dict["environ"]
+
+def set_params(gear_args):
+    """
+    Set the parameters for the structural pipeline QC.
+    Args:
+        gear_args (GearArgs): Custom class containing relevant gear and analysis set up parameters
+    """
     params = OrderedDict()
 
-    params["qc_scene_root"] = op.join(context.work_dir, context.config["Subject"])
-
-    params["T1wTemplateBrain"] = op.join(
-        environ["HCPPIPEDIR_Templates"],
-        "MNI152_T1_" + str(context.config["TemplateSize"]) + "_brain.nii.gz",
+    params["qc_scene_root"] = op.join(
+        gear_args.dirs["bids_dir"], gear_args.common["subject"]
     )
+
+    if "pre_params" not in gear_args.structural.keys():
+        from fw_gear_hcp_struct import PreFreeSurfer
+
+        PreFreeSurfer.set_params(gear_args)
+    params["T1wTemplateBrain"] = gear_args.structural["pre_params"]["t1templatebrain"]
 
     params["qc_image_root"] = op.join(
-        context.work_dir, context.config["Subject"] + ".hcpstruct_QC."
+        gear_args.dirs["bids_dir"], gear_args.common["subject"] + ".hcpstruct_QC."
     )
 
-    context.gear_dict["params"] = params
+    gear_args.structural["qc_mosaic_params"] = params
 
 
-def execute(context):
-    environ = context.gear_dict["environ"]
-    SCRIPT_DIR = context.gear_dict["SCRIPT_DIR"]
-    command = [op.join(SCRIPT_DIR, "hcpstruct_qc_mosaic.sh")]
-    for key in context.gear_dict["params"].keys():
-        command.append(context.gear_dict["params"][key])
+def execute(gear_args):
+    """
+    Create mosaic of QC images for structural pipeline outputs.
+    Args:
+        gear_args (GearArgs): Custom class containing relevant gear and analysis set up parameters
+
+    """
+    command = [op.join(gear_args.dirs["script_dir"], "hcpstruct_qc_mosaic.sh")]
+    for key in gear_args.structural["qc_mosaic_params"].keys():
+        command.append(gear_args.structural["qc_mosaic_params"][key])
     command.append(">>")
-    command.append(op.join(context.work_dir, "logs", "structuralqc.log"))
-    context.log.info("HCP-Struct QC Mosaic command: \n" + " ".join(command) + "\n\n")
-    if not context.gear_dict["dry-run"]:
+    command.append(op.join(gear_args.dirs["bids_dir"], "logs", "structuralqc.log"))
+    log.info(f"HCP-Struct QC Mosaic command: \n{' '.join(command)}\n\n")
+    if not gear_args.fw_specific["gear_dry_run"]:
         result = sp.Popen(
             command,
             stdout=sp.PIPE,
             stderr=sp.PIPE,
             universal_newlines=True,
-            env=environ,
+            env=gear_args.environ,
         )
         stdout, stderr = result.communicate()
-        context.log.info(result.returncode)
-        context.log.info(stdout)
+        log.info(result.returncode)
+        log.info(stdout)
 
         if result.returncode != 0:
-            context.log.error(
-                "The command:\n "
-                + " ".join(command)
-                + "\nfailed. See log for debugging."
+            log.exception(
+                f'The command:\n{" ".join(command)}\nfailed. See log for debugging.'
             )
-            raise Exception(stderr)

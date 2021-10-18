@@ -1,184 +1,261 @@
-import os
 import logging
+import os.path as op
+import shutil
+import subprocess as sp
+import sys
+from zipfile import ZipFile
 
-from utils import results
-
-from fw_gear_hcp_struct import PostProcessing, hcpstruct_qc_mosaic, FreeSurfer, PreFreeSurfer, hcpstruct_qc_scenes, \
-    PostFreeSurfer, struct_utils
+from fw_gear_hcp_struct import (
+    FreeSurfer,
+    PostFreeSurfer,
+    PostProcessing,
+    PreFreeSurfer,
+    hcpstruct_qc_mosaic,
+    hcpstruct_qc_scenes,
+    struct_utils,
+)
+from utils import gear_arg_utils, results
 
 log = logging.getLogger(__name__)
 
-def run(context):
+
+def run(gear_args):
     """
-    Set up and complete the FreeSurfer stages in the HCP Pipeline.
+    Main sequence of structural processing with FreeSurfer. Generally, these methods
+    should be run sequentially, but each stage has its own check for whether the user
+    chose to include the stage.
+    Args:
+        gear_args (GearArgs): Custom class containing relevant gear and analysis set up parameters
+
+    Returns:
+        error code (zero is a successful run with no errors)
     """
-    # Original code from hcp-struct func_main.py
-    # Preamble: take care of all gear-typical activities.
-    context.gear_dict = {}
-    # Initialize all hcp-gear variables.
-    gear_preliminaries.initialize_gear(context)
-    context.log_config()
+    check_FS_install(gear_args)
+
+    if "PreFreeSurfer" in gear_args.common["stages"]:
+        run_preFS(gear_args)
+    ###########################################################################
+    # Must do a list comprehension to check for exact match.
+    if "FreeSurfer" in gear_args.common["stages"].split():
+        run_FS(gear_args)
+    ###########################################################################
+    if "PostFreeSurfer" in gear_args.common["stages"]:
+        if not "FreeSurfer" in gear_args.common["stages"].split():
+            # Get the zipped results from a previous run to continue the analysis
+            # without re-running FS.
+            if "hcpstruct_zip" in gear_args.common.keys():
+                (
+                    hcp_struct_list,
+                    hcp_struct_config,
+                ) = gear_arg_utils.make_hcp_zip_available(gear_args)
+            else:
+                log.error(
+                    f"hcpstruct_zip (in Inputs) must be specified when selecting PostFreeSurfer"
+                    f"without running FreeSurfer at the same time."
+                )
+                gear_args.common["errors"].append(
+                    {
+                        "message": "Struct PostProcessing defining/unzipping HCPstruct_zip",
+                        "exception": "hcpstruct_zip (in Inputs) must be specified when selecting PostFreeSurfer without running FreeSurfer at the same time.",
+                    }
+                )
+
+        run_postFS(gear_args)
+        if gear_args.fw_specific["gear_dry_run"] is False:
+            run_struct_qc(gear_args)
+    return 0
+
+
+def check_FS_install(gear_args):
+    """
+    Check a couple of the absolute prerequisites for FreeSurfer to run: the package
+    defined in the path and a core template directory that is linked during recon-all.
+    """
     # Utilize FreeSurfer license from config or project metadata
-    try:
-        gear_preliminaries.set_freesurfer_license(context)
-    except Exception as e:
-        context.log.exception(e)
-        context.log.fatal(
+    proc = sp.run(["which", "freesurfer"], stdout=sp.PIPE, env=gear_args.environ)
+    if proc.stdout:
+        log.info(f'FreeSurfer installed {proc.stdout.decode("utf-8")}')
+    else:
+        log.fatal(
             "A valid FreeSurfer license must be present to run."
             "Please check your configuration and try again."
         )
-        os.sys.exit(1)
-
-    # Validate gear configuration against gear manifest
-    try:
-        gear_preliminaries.validate_config_against_manifest(context)
-    except Exception as e:
-        context.log.exception(e)
-        context.log.fatal("Please make the prescribed corrections and try again.")
-        os.sys.exit(1)
-
-    # Can I automate this? Do I want to?
-    context.gear_dict["FreeSurfer_Version"] = struct_utils.get_freesurfer_version(
-        context
+        sys.exit(1)
+    # Make the FreeSurfer average templates available
+    template_dir = op.join(
+        gear_args.environ["FREESURFER_HOME"], "subjects", "fsaverage"
     )
+    log.debug(f"Checking for fsaverage in {template_dir}")
+    templates = sp.run(["ls", template_dir], stdout=sp.PIPE, env=gear_args.environ)
+    if len(templates.stdout.decode("utf-8").split("\n")[0]) < 5:
+        log.error(f"fsaverage templates missing. FS will fail without them.")
+        sys.exit(1)
 
-    ###########################################################################
-    # Build and Validate parameters for all stages of the pipeline before
-    # attempting to execute. Correct parameters or gracefully recover where
-    # possible.
-    ###########################################################################
-    # Ensure the subject_id is set in a valid manner (api or config)
-    try:
-        gear_preliminaries.set_subject(context)
-    except Exception as e:
-        context.log.exception(e)
-        context.log.fatal(
-            "The Subject ID is not valid. Examine and try again.",
-        )
-        os.sys.exit(1)
-
-    # Build and Validate Parameters for the PreFreeSurferPipeline.sh
-    try:
-        PreFreeSurfer.build(context)
-        PreFreeSurfer.validate(context)
-    except Exception as e:
-        context.log.exception(e)
-        context.log.fatal(
-            "Validating Parameters for the PreFreeSurferPipeline Failed.",
-        )
-        os.sys.exit(1)
-
-    ###########################################################################
-    # Build and Validate Parameters for the FreeSurferPipeline.sh
-    try:
-        FreeSurfer.build(context)
-        # These parameters need to be validated after the PreFS run
-        # No user-submitted parameters to validate at this level
-        # FreeSurfer.validate(context)
-    except Exception as e:
-        context.log.exception(e)
-        context.log.fatal("Validating Parameters for the FreeSurferPipeline Failed.")
-        os.sys.exit(1)
-
-    ###########################################################################
-    # Build and Validate Parameters for the PostFreeSurferPipeline.sh
-    try:
-        PostFreeSurfer.build(context)
-        PostFreeSurfer.validate(context)
-    except Exception as e:
-        context.log.exception(e)
-        context.log.fatal(
-            "Validating Parameters for the PostFreeSurferPipeline Failed!"
-        )
-        os.sys.exit(1)
-
-    ###########################################################################
-    # Some hcp-func specific output parameters:
+    # Set some hcp specific output parameters:
     (
-        context.gear_dict["output_config"],
-        context.gear_dict["output_config_filename"],
-    ) = struct_utils.configs_to_export(context)
+        gear_args.common["output_config"],
+        gear_args.common["output_config_filename"],
+    ) = struct_utils.configs_to_export(gear_args)
 
-    context.gear_dict["output_zip_name"] = op.join(
-        context.output_dir, "{}_hcpstruct.zip".format(context.config["Subject"])
+    gear_args.common["output_zip_name"] = op.join(
+        gear_args.dirs["output_dir"],
+        "{}_hcpstruct.zip".format(gear_args.common["subject"]),
     )
-    # Pipelines common commands
-    # QUEUE works differently in FSL 6.0.1..we are not using it.
-    QUEUE = "-q "
-    LogFileDirFull = op.join(context.work_dir, "logs")
-    os.makedirs(LogFileDirFull, exist_ok=True)
-    FSLSUBOPTIONS = "-l " + LogFileDirFull
-    environ = context.gear_dict["environ"]
-    command_common = [op.join(environ["FSLDIR"], "bin", "fsl_sub"), FSLSUBOPTIONS]
 
-    context.gear_dict["command_common"] = command_common
 
-    ###########################################################################
-    # Run PreFreeSurferPipeline.sh from subprocess.run
+def run_preFS(gear_args):
+    """
+    First stage in structural HCP analysis. Creates folder structure within the bids_dir,
+    corresponding to the subject label (minus the 'sub-' str).
+    """
     try:
-        PreFreeSurfer.execute(context)
+        log.debug("Setting PreFreeSurfer parameters.")
+        PreFreeSurfer.set_params(gear_args)
     except Exception as e:
-        context.log.exception(e)
-        context.log.fatal(
-            "The PreFreeSurferPipeline Failed.",
+        log.exception(e)
+        log.error(
+            "Setting parameters for the PreFreeSurferPipeline Failed.",
         )
-        if context.config["gear-save-on-error"]:
-            results.cleanup(context)
-        os.sys.exit(1)
-
+        gear_args.common["errors"].append(
+            {"message": "Set PreFS params", "exception": e}
+        )
     ###########################################################################
-    # Run FreeSurferPipeline.sh from subprocess.run
+
+    if not gear_args.common["errors"]:
+        # Run PreFreeSurferPipeline.sh from subprocess.run
+        try:
+            log.debug("Executing PreFreeSurfer command.")
+            PreFreeSurfer.execute(gear_args)
+        except Exception as e:
+            log.exception(e)
+            log.fatal(
+                "The PreFreeSurferPipeline Failed.",
+            )
+            if gear_args.fw_specific["gear_save_on_error"]:
+                results.cleanup(gear_args)
+            sys.exit(1)
+
+
+def run_FS(gear_args):
+    """
+    Set up the command line arguments (params in set_params) for FreeSurfer to complete
+    the structural analysis. This stage takes about 9 hours to run and is essential for the
+    functional and diffusion stages to be able to register images properly.
+    gear_args.common["errors"] collects any issues with set up from this step or PreFreeSurfer.
+    If there are errors, FreeSurfer analysis will not be initiated.
+
+    Returns:
+        Each of the following should be produced, even upon errors during the FreeSurfer run, if
+        the 'save-on-gear-error' box is checked during set up.
+        hcpstruct_zip: zipped file populated to /flywheel/v0/output that contains the majority
+            of the structural analysis.
+        log files: also zipped and made available as output. output ("o") and error ("e") logs
+            are automatically generated by FreeSurfer
+    """
     try:
-        FreeSurfer.validate(context)
-        FreeSurfer.execute(context)
+        log.debug("Setting FS parameters.")
+        FreeSurfer.set_params(gear_args)
     except Exception as e:
-        context.log.exception(e)
-        context.log.fatal("The FreeSurferPipeline Failed.")
-        if context.config["gear-save-on-error"]:
-            results.cleanup(context)
-        os.sys.exit(1)
+        log.exception(e)
+        gear_args.common["errors"].append("Setting FS params")
+        log.fatal("Setting parameters for the FreeSurferPipeline Failed.")
+        sys.exit(1)
 
-    ###########################################################################
+    if not gear_args.common["errors"]:
+        # Run FreeSurferPipeline.sh from subprocess.run
+        try:
+            FreeSurfer.execute(gear_args)
+            # Make the hcp_struct_zip file available in an 'immutable' field
+            gear_args.common["hcpstruct_zip"] = gear_args.common["output_zip_name"]
+        except Exception as e:
+            # Since this is such a time intensive step, keep the log of what
+            # was accomplished for quicker debugging.
+            shutil.copy(
+                op.join(
+                    gear_args.environ["SUBJECTS_DIR"],
+                    gear_args.common["subject"],
+                    "scripts",
+                    "recon-all.log",
+                ),
+                op.join(gear_args.dirs["output_dir"], "recon-all.log"),
+            )
+            ZipFile(op.join(gear_args.dirs["output_dir"], "recon-all.log"))
+            log.info("recon-all.log available on Output tab for this analysis.")
+            # Follow the same log procedures as other stages.
+            log.exception(e)
+            log.fatal("The FreeSurferPipeline Failed.")
+            if gear_args.fw_specific["gear_save_on_error"]:
+                results.cleanup(gear_args)
+            sys.exit(1)
+
+
+def run_postFS(gear_args):
+    """
+    Runs the postFreeSurfer routine and converts the aseg stats tables into csv's for
+    further use (PostProcessing.py), if no errors were detected in setting up or running
+    PreFreeSurfer or FreeSurfer.
+    This stage can be entered after the hcpstruct_zip file is created in run_FS or a
+    previous complete structural analysis. If one only wants to run the postprocessing
+    stats conversion, the user may select 'stats-only_struct' in the setup configuration.
+    """
+    try:
+        log.debug("Setting up PostFreeSurfer.")
+        PostFreeSurfer.set_params(gear_args)
+    except Exception as e:
+        log.exception(e)
+        gear_args.common["errors"].append(
+            {"message": "Setting PostFS params", "exception": {e}}
+        )
+        log.fatal("Setting parameters for the PostFreeSurferPipeline Failed!")
+        sys.exit(1)
+
     # Run PostFreeSurferPipeline.sh from subprocess.run
+    if not gear_args.common["errors"]:
+        if "stats-only" in gear_args.structural.keys():
+            log.info("Skipping straight to compiling stats.")
+        else:
+            try:
+                PostFreeSurfer.execute(gear_args)
+            except Exception as e:
+                log.exception(e)
+                log.fatal("The PostFreeSurferPipeline Failed!")
+                if gear_args.fw_specific["gear_save_on_error"]:
+                    results.cleanup(gear_args)
+                sys.exit(1)
+
+        ###########################################################################
+        # Run PostProcessing for "safe_listed" files
+        #  - "safe_listed" files being copied direclty to ./output/ rather than
+        #    being compressed into the result zip file.
+        try:
+            PostProcessing.set_params(gear_args)
+            if gear_args.fw_specific["gear_dry_run"] is False:
+                PostProcessing.execute(gear_args)
+        except Exception as e:
+            if gear_args.fw_specific["gear_save_on_error"]:
+                results.cleanup(gear_args)
+            log.exception(e)
+            log.fatal("The Post Processing Failed!")
+            sys.exit(1)
+
+
+def run_struct_qc(gear_args):
+    """
+    Sends parameters to shell scripts that generate quality control images.
+
+    Returns:
+        png files: subject-derived results are overlaid on template images.
+    """
     try:
-        PostFreeSurfer.execute(context)
+        hcpstruct_qc_scenes.set_params(gear_args)
+        hcpstruct_qc_scenes.execute(gear_args)
+
+        hcpstruct_qc_mosaic.set_params(gear_args)
+        hcpstruct_qc_mosaic.execute(gear_args)
+        # Clean-up and output prep
+        results.cleanup(gear_args)
     except Exception as e:
-        context.log.exception(e)
-        context.log.fatal("The PostFreeSurferPipeline Failed!")
-        if context.config["gear-save-on-error"]:
-            results.cleanup(context)
-        os.sys.exit(1)
-
-    ###########################################################################
-    # Run PostProcessing for "whitelisted" files
-    #  - "whitelisted" files being copied direclty to ./output/ rather than
-    #    being compressed into the result zip file.
-    try:
-        PostProcessing.build(context)
-        PostProcessing.execute(context)
-    except Exception as e:
-        context.log.exception(e)
-        context.log.fatal("The Post Processing Failed!")
-        if context.config["gear-save-on-error"]:
-            results.cleanup(context)
-        os.sys.exit(1)
-
-    ###########################################################################
-    # Generate HCPStructural QC Images
-    try:
-        hcpstruct_qc_scenes.build(context)
-        hcpstruct_qc_scenes.execute(context)
-
-        hcpstruct_qc_mosaic.build(context)
-        hcpstruct_qc_mosaic.execute(context)
-    except Exception as e:
-        context.log.exception(e)
-        context.log.fatal("HCP Structural QC Images has failed!")
-        if context.config["gear-save-on-error"]:
-            results.cleanup(context)
-        exit(1)
-
-    ###########################################################################
-    # Clean-up and output prep
-    results.cleanup(context)
-    return os.sys.exit(0)
+        if gear_args.fw_specific["gear_save_on_error"]:
+            results.cleanup(gear_args)
+        log.exception(e)
+        log.error("HCP Structural QC Images has failed!")
