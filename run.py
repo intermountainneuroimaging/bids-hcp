@@ -62,8 +62,10 @@ def main(gtk_context: GearToolkitContext):
         ) and (e_code == 0):
             e_code += diff_main.run(gear_args)
 
-    sys.exit(e_code)
-
+    if e_code >= 1:
+        sys.exit(1)
+    else:
+        sys.exit(0)
 
 if __name__ == "__main__":
     # TODO add Singularity capability
