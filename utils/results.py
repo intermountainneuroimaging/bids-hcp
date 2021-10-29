@@ -11,6 +11,8 @@ import shutil
 import subprocess as sp
 from zipfile import ZIP_DEFLATED, ZipFile
 
+import jsonpickle
+
 log = logging.getLogger(__name__)
 
 # ################################################################################
@@ -43,7 +45,7 @@ def preserve_safe_list_files(gear_args):
     the user as well as compressed into the output zipfile.
 
     Args:
-        gear_args: contains 'commom' attribute with keys/values,
+        gear_args: contains 'common' attribute with keys/values,
             'safe_list': a list of working directory files to place directly in
                 the output directory
             'dry-run': a boolean parameter indicating whether or not to perform
@@ -71,23 +73,31 @@ def zip_output(gear_args):
             'exclude_from_output': files to exclude from the output
             (e.g. hcp-struct files)
     """
-
-    outputzipname = gear_args.common["output_zip_name"]
+    if {gear_args.common["scan_type"]} == "func":
+        output_zipname = op.join(
+            gear_args.dirs["output_dir"],
+            f"{gear_args.common['subject']}_{gear_args.functional['fmri_name']}_hcp{gear_args.common['scan_type']}.zip",
+        )
+    else:
+        output_zipname = op.join(
+            gear_args.dirs["output_dir"],
+            f"{gear_args.common['subject']}_hcp{gear_args.common['scan_type']}.zip",
+        )
 
     if "exclude_from_output" in gear_args.common.keys():
         exclude_from_output = gear_args.common["exclude_from_output"]
     else:
         exclude_from_output = []
 
-    log.info("Zipping output file %s", outputzipname)
+    log.info("Zipping output file %s", output_zipname)
     if not gear_args.fw_specific["gear_dry_run"]:
         try:
-            os.remove(outputzipname)
+            os.remove(output_zipname)
         except Exception as e:
             pass
 
         os.chdir(gear_args.dirs["bids_dir"])
-        outzip = ZipFile(outputzipname, "w", ZIP_DEFLATED)
+        outzip = ZipFile(output_zipname, "w", ZIP_DEFLATED)
         for root, _, files in os.walk(gear_args.common["subject"]):
             for fl in files:
                 fl_path = op.join(root, fl)
@@ -109,16 +119,25 @@ def zip_pipeline_logs(gear_args):
     """
 
     # zip pipeline logs
-    logzipname = op.join(gear_args.dirs["output_dir"], "pipeline_logs.zip")
-    log.info("Zipping pipeline logs to %s", logzipname)
+    if {gear_args.common["scan_type"]} == "func":
+        log_zipname = op.join(
+            gear_args.dirs["output_dir"],
+            f"{gear_args.common['fmri_name']}_{gear_args.common['scan_type']}_pipeline_logs.zip",
+        )
+    else:
+        log_zipname = op.join(
+            gear_args.dirs["output_dir"],
+            f"{gear_args.common['scan_type']}_pipeline_logs.zip",
+        )
+    log.info("Zipping pipeline logs to %s", log_zipname)
 
     try:
-        os.remove(logzipname)
+        os.remove(log_zipname)
     except Exception as e:
         pass
 
     os.chdir(gear_args.dirs["bids_dir"])
-    logzipfile = ZipFile(logzipname, "w", ZIP_DEFLATED)
+    logzipfile = ZipFile(log_zipname, "w", ZIP_DEFLATED)
     for root, _, files in os.walk("logs"):
         log.debug(f"Found logs in {root}")
         for fl in files:
@@ -184,7 +203,7 @@ def cleanup(gear_args):
     export_metadata(gear_args)
     create_error_log(gear_args)
     # List final directory to log
-    log.info("Final output directory listing: \n")
+    log.info("Final output directory listing: gear_args.dirs['output_dir']")
     os.chdir(gear_args.dirs["output_dir"])
     duResults = sp.Popen(
         "du -hs *", shell=True, stdout=sp.PIPE, stderr=sp.PIPE, universal_newlines=True
@@ -208,10 +227,10 @@ def create_error_log(gear_args):
     if gear_args.common["errors"]:
         log.debug(f'Errors were:\n{gear_args.common["errors"]}')
 
-    log.info(
-        "Logging gear_args as output. Please consult logs particularly to make\n"
-        "sure that all necessary files were located and placed in the \n"
-        "appropriate modality configurations."
-    )
-    with open(op.join(gear_args.dirs["output_dir"], "gear_arg.json"), "w") as fp:
-        json.dump(gear_args, fp)
+    # log.info(
+    #     "Logging gear_args as output. Please consult logs particularly to make\n"
+    #     "sure that all necessary files were located and placed in the \n"
+    #     "appropriate modality configurations."
+    # )
+    # with open(op.join(gear_args.dirs["output_dir"], "gear_arg.json"), "w") as fp:
+    #     jsonpickle.encode(gear_args)

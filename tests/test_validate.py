@@ -1,15 +1,23 @@
 """Unit test for running BIDS validation"""
-
 import json
 import logging
+import os.path as op
 import subprocess as sp
+from glob import glob
 from os import chdir
 from pathlib import Path
+from shutil import copy
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from utils.bids.validate import validate_bids
+
+inputs = glob(op.join(op.dirname(__file__), "data", "*json"))
+for f in inputs:
+    name = op.basename(f)
+    o = op.join(op.dirname(op.dirname(__file__)), "tmp", name)
+    copy(f, o)
 
 FWV0 = Path.cwd()
 DATA_ROOT = Path("data").resolve()
@@ -18,7 +26,7 @@ DATA_ROOT = Path("data").resolve()
 @pytest.fixture(scope="function")
 def json_file():
     def get_json_file(name):
-        return DATA_ROOT / Path("validator." + name + ".json")
+        return DATA_ROOT / Path("validator." + name + ".json").resolve()
 
     return get_json_file
 

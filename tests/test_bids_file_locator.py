@@ -27,7 +27,11 @@ class TestBids:
         ):
             self.test_bids = bidsInput(mock_gtk_context)
         self.test_bids.layout = MagicMock()
-        self.test_bids.layout.get.return_value = [Path("a"), Path("b"), Path("c")]
+        self.test_bids.layout.get.return_value = [
+            fake_BIDSLayout("a"),
+            fake_BIDSLayout("b"),
+            fake_BIDSLayout("c"),
+        ]
 
     def test_bidsInputClass(self):
         """Did the TestBIds Class inherit the correct mock and initialize?"""
@@ -35,8 +39,12 @@ class TestBids:
         assert not self.test_bids.t2ws
 
     def test_findT1ws_returnsT1ws(self, mock_gear_args):
-        self.test_bids.find_t1ws(self)
+        self.test_bids.find_t1ws(mock_gear_args)
         assert len(mock_gear_args.structural["raw_t1s"]) == 3
+
+    def test_findT2ws_returnsT2ws(self, mock_gear_args):
+        self.test_bids.find_t2ws(mock_gear_args)
+        assert len(mock_gear_args.structural["raw_t2s"]) == 3
 
 
 # def test_find_bids_files(mock_gtk_context):
@@ -63,3 +71,8 @@ class TestBids:
 #
 # def test_locate_scan_params(self):
 #     pass
+
+
+class fake_BIDSLayout:
+    def __init__(self, input_name):
+        self.path = input_name

@@ -53,6 +53,7 @@ def mock_gear_args(mocker):
             "dof": 12,
             "vol_params": "whatever",
             "surf_params": "whatever_take2",
+            "echo_spacing": 0.01,
         },
         fw_specific={"gear_dry_run": False, "gear_save_on_error": True},
         structural={

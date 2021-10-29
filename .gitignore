@@ -2,7 +2,5 @@ ignore*
 MSM*
 *.pyc
 __pycache__
-.DS_Store
-utils/.DS_Store
-fw_gear_hcp_struct/args/.DS_Store
+*.DS_Store
 /tmp/

@@ -3,6 +3,7 @@ import logging
 import os.path as op
 import re
 from collections import defaultdict
+from os import listdir
 from zipfile import ZipFile
 
 from flywheel_gear_toolkit import GearToolkitContext
@@ -70,10 +71,16 @@ def make_hcp_zip_available(gear_args):
     try:
         hcp_struct_zip_filename = gear_args.common["hcpstruct_zip"]
         hcp_struct_list, hcp_struct_config = process_hcp_zip(hcp_struct_zip_filename)
-        if not all(op.exists(f) for f in hcp_struct_list):
+        if not all(
+            op.exists(op.join(gear_args.dirs["bids_dir"], f)) for f in hcp_struct_list
+        ):
             unzip_hcp(gear_args, hcp_struct_zip_filename)
         else:
-            log.debug(f'Did not unzip the structural files, because they already existed.')
+            # Running into an error, where the func will not process after struct on the same run.
+            # The wb error says that the FS files are not available (even though they are in the zip archive)
+            log.debug(
+                f"Not unzipping the structural files, because they already exist."
+            )
         return hcp_struct_list, hcp_struct_config
     except Exception as e:
         log.exception(e)
