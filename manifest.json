@@ -59,10 +59,10 @@
     },
     "bias_correction_func": {
       "default": "NONE",
-      "description": "Bias-field estimation method. 'NONE'(default),'SEBased', or 'Legacy'. 'SEBased'=Estimate from SpinEchoFieldMap (only possible with both Pos and Neg SpinEcho), 'Legacy'=Estimate from structural scans (only valid if structural collected in the same session, and without any subject movement)",
+      "description": "Bias-field estimation method. 'NONE'(default),'SEBASED', or 'Legacy'. 'SEBASED'=Estimate from SpinEchoFieldMap (only possible with both Pos and Neg SpinEcho), 'Legacy'=Estimate from structural scans (only valid if structural collected in the same session, and without any subject movement)",
       "enum": [
         "NONE",
-        "SEBased",
+        "SEBASED",
         "Legacy"
       ],
       "type": "string"
@@ -161,7 +161,7 @@
     },
     "gear-builder": {
       "category": "analysis",
-      "image": "flywheel/bids-hcp:0.1.7_4.3.0_rc1"
+      "image": "flywheel/bids-hcp:0.2.4_4.3.0_rc1"
     }
   },
   "description": "Runs the preprocessing steps of the Human Connectome Project Minimal Preprocessing Pipeline, described in Glasser et al. 2013. Currently this includes v4.3.0 release of PreFreeSurfer, FreeSurfer, and PostFreeSurfer pipelines. This Gear also generates some helpful QC images.",
@@ -243,5 +243,5 @@
   "name": "bids-hcp",
   "source": "https://github.com/flywheel-apps/bids-hcp",
   "url": "https://github.com/Washington-University/Pipelines",
-  "version": "0.1.7_4.3.0_rc1"
+  "version": "0.2.4_4.3.0_rc1"
 }

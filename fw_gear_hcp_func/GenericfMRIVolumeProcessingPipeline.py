@@ -89,7 +89,11 @@ def set_params(gear_args):
     if "gdcoeffs" in gear_args.common.keys():
         params["gdcoeffs"] = gear_args.common["gdcoeffs"]
 
-    # params["printcom"] = " "
+    # Check echo spacing
+    if float(params["echospacing"]) > 0.001:
+        # FSL requires echospacing in milliseconds, while structural pipeline EffectiveEchoSpacing
+        # is in seconds.
+        params["echospacing"] = float(params["echospacing"]) / 1000
 
     gear_args.functional["vol_params"] = params
 
@@ -103,38 +107,16 @@ def set_params(gear_args):
         )
         gear_args.common["errors"].append(
             {
-                "message": "Setting fMRIVol params",
+                "message": f"Setting fMRIVol params for {params['fmritcs']}",
                 "exception": 'Distortion Correction must be either "TOPUP" or '
                 + '"SiemensFieldMap" to proceed with fMRI Volume Processing.'
                 + "Please provide valid Spin Echo Positive/Negative or "
                 + "Siemens GRE Phase/Magnitude field maps.",
             }
         )
+    else:
+        params = validate_func_dcmethod(gear_args, params)
 
-    # Ensure that SE-Based BiasCorrection is only used with TOPUP
-    # Distortion Correction
-    if (params["dcmethod"].upper() != "TOPUP") and (
-        params["biascorrection"].lower() == "sebased"
-    ):
-        log.error(
-            "SE-Based BiasCorrection only available when "
-            + "providing Pos and Neg SpinEchoFieldMap scans"
-        )
-        gear_args.common["errors"].append(
-            {
-                "message": "fMRIVol Distortion Correction",
-                "exception": "SE-Based BiasCorrection only available when "
-                + "providing Pos and Neg SpinEchoFieldMap scans",
-            }
-        )
-
-    # Ensure that Distortion correction has a configuration file.
-    if (params["dcmethod"].upper() == "TOPUP") and not params["topupconfig"]:
-        log.error("Must have TOPUP configuration file.")
-        gear_args.common["errors"].append("fMRI Vol needs TOPUP config.")
-
-    if (params["dcmethod"].upper() == "TOPUP") and not params["unwarpdir"]:
-        log.error("unwarpdir undefined for TOPUP fMRI Distortion Correction")
     # For testing
     return params
 
@@ -164,3 +146,52 @@ def execute(gear_args):
         environ=gear_args.environ,
         stdout_msg=stdout_msg,
     )
+
+def validate_func_dcmethod(gear_args, params):
+    """
+    Mutual lock out function that will set the params to only have SiemendsFieldMap
+    settings or only TOPUP settings. The aim to override studies with poorly or
+    misspecified BIDS curation for fmaps.
+    """
+    if (params["dcmethod"] == 'SiemensFieldMap') and (not params['biascorrection'].upper() == "SEBASED"):
+        if not params['fmapmag'] or not params['fmapphase']:
+            log.error(f'SiemensFieldMap was selected for Distortion correction, but Phase and or Mag fmaps are not specified.')
+        else:
+            log.info('Ensuring SiemensFieldMap-related fields are populated correctly.')
+            params['biascorrection'] = 'NONE'
+            params['SEPhasePos'] = 'NONE'
+            params['SEPhaseNeg'] = 'NONE'
+    elif params["dcmethod"].upper() == "TOPUP":
+        if not params['SEPhasePos'] or not params['SEPhaseNeg']:
+            log.error(
+                "SE-Based BiasCorrection only available when "
+                + "providing Pos and Neg SpinEchoFieldMap scans"
+                + f"dcmethod={params['dcmethod'].upper()}"
+                + f"biascorrection={params['biascorrection']}"
+                + f"SEPhasePos: {params['SEPhasePos']}"
+                + f"SEPhaseNeg: {params['SEPhaseNeg']}"
+            )
+            gear_args.common["errors"].append(
+                {
+                    "message": f"fMRIVol Distortion Correction for {params['fmritcs']}",
+                    "exception": "SE-Based BiasCorrection only available when "
+                                 + "providing Pos and Neg SpinEchoFieldMap scans",
+                }
+            )
+        else:
+            log.info(
+            f'Ensuring that TOPUP-related fields are populated properly.')
+            params['fmapmag'] = 'NONE'
+            params['fmapphase'] = 'NONE'
+            params['biascorrection'] = 'SEBASED'
+
+
+    # Ensure that Distortion correction has a configuration file.
+    if (params["dcmethod"].upper() == "TOPUP") and not params["topupconfig"]:
+        log.error("Must have TOPUP configuration file.")
+        gear_args.common["errors"].append("fMRI Vol needs TOPUP config.")
+
+    if (params["dcmethod"].upper() == "TOPUP") and not params["unwarpdir"]:
+        log.error("unwarpdir undefined for TOPUP fMRI Distortion Correction")
+
+    return params

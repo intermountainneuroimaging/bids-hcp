@@ -50,14 +50,16 @@ def main(gtk_context: GearToolkitContext):
         "gear_dry_run"
     ]:
         # Functional analysis
-        if any("fmri" in arg.lower() for arg in [gear_args.common["stages"]]):
+        if any("fmri" in arg.lower() for arg in [gear_args.common["stages"]]) and (
+            e_code == 0
+        ):
             e_code += func_main.run(gear_args, bids_info)
 
         # Diffusion analysis
         if any(
             arg in ["dwi", "diffusion"]
             for arg in [x.lower() for x in gear_args.common["stages"].split(" ")]
-        ):
+        ) and (e_code == 0):
             e_code += diff_main.run(gear_args)
 
     sys.exit(e_code)

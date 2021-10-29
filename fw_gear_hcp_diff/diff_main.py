@@ -14,13 +14,21 @@ def run(gear_args):
     Set up and complete the Diffusion Processing stage in the HCP Pipeline.
     Args:
         gear_args (GearArgs): Custom class containing relevant gear and analysis set up parameters
+    Returns:
+        rc (int): return code
     """
+    gear_args.common['scan_type'] = 'diff'
+    rc = 0
     # Get file list and configuration from hcp-struct zipfile
     helper_funcs.run_struct_zip_setup(gear_args)
 
-    run_diffusion(gear_args)
+    rc = run_diffusion(gear_args)
 
-    if (not gear_args.common["errors"]) and (not gear_args.fw_specific["gear_dry_run"]):
+    if (
+        (not gear_args.common["errors"])
+        and (not gear_args.fw_specific["gear_dry_run"])
+        and (rc == 0)
+    ):
         run_diff_qc(gear_args)
 
     return 0
@@ -31,18 +39,14 @@ def run_diffusion(gear_args):
     The heart of the analysis. The method sets some HCP diffusion specific output parameters and then tries to
     launch the analysis process.
     """
+    rc = 0
     try:
         # Build and validate from Volume Processing Pipeline
         DiffPreprocPipeline.set_params(gear_args)
     except Exception as e:
-        gear_args.common["errors"].append(
-            {"message": "Setting up Diffusion", "exception": e}
+        rc = helper_funcs.report_failure(
+            gear_args, e, "Building params for diffusion", "fatal"
         )
-        log.exception(e)
-        log.fatal(
-            "Validating Parameters for the Diffusion Preprocessing Pipeline Failed!"
-        )
-        sys.exit(1)
 
     # Reports some of the parameters that were just set.
     (
@@ -60,14 +64,10 @@ def run_diffusion(gear_args):
         try:
             DiffPreprocPipeline.execute(gear_args)
         except Exception as e:
-            gear_args.common["errors"].append(
-                {"message": "Executing Diffusion", "exception": e}
+            rc = helper_funcs.report_failure(
+                gear_args, e, "Executing diffusion", "fatal"
             )
-            log.exception(e)
-            if gear_args.fw_specific["gear_save_on_error"]:
-                results.cleanup(gear_args)
-            log.fatal("The Diffusion Preprocessing Pipeline Failed!")
-            sys.exit(1)
+    return rc
 
 
 def run_diff_qc(gear_args):
@@ -84,7 +84,4 @@ def run_diff_qc(gear_args):
             # Clean-up and output prep
             results.cleanup(gear_args)
         except Exception as e:
-            log.exception(e)
-            log.error("HCP Diffusion QC Images has failed!")
-            if gear_args.fw_specific["gear_save_on_error"]:
-                results.cleanup(gear_args)
+            helper_funcs.report_failure(gear_args, e, "Diffusion QC")

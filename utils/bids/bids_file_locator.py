@@ -91,6 +91,11 @@ class bidsInput:
                 extension=["nii.gz", "nii"],
             )
         ]
+        self.t1ws = [
+            scan
+            for scan in self.t1ws
+            if "MNINonLinear" not in scan
+        ]
         assert len(self.t1ws) > 0, (
             "No T1w files found for subject %s!"
             % self.hierarchy["subject_label"].split("-")[-1]
@@ -106,6 +111,11 @@ class bidsInput:
                 suffix="T2w",
                 extension=["nii.gz", "nii"],
             )
+        ]
+        self.t2ws = [
+            scan
+            for scan in self.t2ws
+            if "MNINonLinear" not in scan
         ]
         gear_args.structural["raw_t2s"] = self.t2ws
 
@@ -209,7 +219,8 @@ class bidsInput:
                     for f in gear_args.diffusion["raw_dwis"]
                     if enc_dir in f.filename
                 ]
-                pos, neg, _, echo_spacing = self.read_PE_dir(matching_files)
+                # Not crazy - the diffusion directions are opposite. Neg is first.
+                neg, pos, _, echo_spacing = self.read_PE_dir(matching_files)
                 gear_args.diffusion["pos_data"].append(pos)
                 gear_args.diffusion["neg_data"].append(neg)
                 ################### From HCP example script
