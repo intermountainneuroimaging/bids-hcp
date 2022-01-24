@@ -1,15 +1,13 @@
 # Creates docker container that runs HCP Pipeline algorithms
 #
 #
-
 # Uses focal 20.04 LTS
-FROM flywheel/hcp-base:1.0.3_4.3.0rc0
+FROM flywheel/hcp-base:1.0.3_4.3.0rc1
 
 LABEL maintainer="Flywheel <support@flywheel.io>"
 
 # Remove expired LetsEncrypt cert
-RUN rm /usr/share/ca-certificates/mozilla/DST_Root_CA_X3.crt && \
-    update-ca-certificates
+RUN update-ca-certificates
 ENV REQUESTS_CA_BUNDLE "/etc/ssl/certs/ca-certificates.crt"
 
 # Install BIDS Validator
@@ -110,19 +108,19 @@ RUN ln -s /opt/workbench/bin_linux64/wb_command /opt/workbench/wb_command
 
 # ENV preservation for Flywheel Engine
 # Do not remove this. utils.bids.environment depends on it and is called heavily through out suite.
-RUN python -c 'import os, json; f = open("/tmp/gear_environ.json", "w"); json.dump(dict(os.environ), f)'
+RUN python3 -c 'import os, json; f = open("/tmp/gear_environ.json", "w"); json.dump(dict(os.environ), f)'
 
 
 # Add poetry oversight.
-RUN apt-get update && \
-	apt-get install -y \
+RUN apt-get update &&\
+    apt-get install -y --no-install-recommends \
 	software-properties-common &&\
-	add-apt-repository ppa:deadsnakes/ppa && \
+	add-apt-repository -y 'ppa:deadsnakes/ppa' &&\
 	apt-get update && \
 	apt-get install -y --no-install-recommends python3.9\
+    python3.9-dev \
 	python3.9-venv \
-	python3-pip\
-	python3.9-dev && \
+	python3-pip &&\
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
