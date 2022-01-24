@@ -92,7 +92,7 @@ def dcmethods(gear_args, bids_layout, modality):
             updated_configs["dcmethod"] = "NONE"
     else:
         log.warning(
-            f"Problem with processing the fieldmaps for {modality}.\nLikely that the intended for field is not properly set.\nPlease check and retry the analysis."
+            f"Did not locate fieldmaps for {modality}.\nLikely that the intended for field is not properly set.\nPlease check and retry the analysis, if there should have been IntendedFors."
         )
     return updated_configs
 
@@ -273,8 +273,12 @@ def check_intended_for_fmaps(bids_layout, bids_dir, filepath):
                         ix +=1
     except Exception as e:
         log.exception(e)
-    if not fieldmap_set:
-        # "BACKUP" method
+
+    if not fieldmap_set or fieldmap_set[0] == {}:
+        # Even though the structure had to be initialized, an empty set should
+        # trigger the secondary check below and skip fieldmap processing later, if
+        # there are legitimately no IntendedFors.
         log.info(f"Using BIDSLayout method, as {filepath} did not return a match in the fmap jsons.")
+        # "BACKUP" method
         fieldmap_set = bids_layout.get_fieldmap(filepath, return_list=True)
     return fieldmap_set

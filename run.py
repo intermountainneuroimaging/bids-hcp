@@ -15,7 +15,7 @@ from utils.set_gear_args import GearArgs
 log = logging.getLogger(__name__)
 
 
-def main(gtk_context: GearToolkitContext):
+def main(gtk_context):
     # Set up the templates, config options from the config_json, and other essentials
     log.info("Populating gear arguments")
     gear_args = GearArgs(gtk_context)
