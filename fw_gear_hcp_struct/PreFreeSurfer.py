@@ -103,16 +103,8 @@ def set_params(gear_args):
     dwell_time = gear_arg_utils.query_json(params["t2"], "DwellTime")
     if dwell_time:
         params["t2samplespacing"] = format(dwell_time, ".15f")
-
-    # If "DwellTime" is not found in T1w/T2w, skip
-    # readout distortion correction
-    if (params["t1samplespacing"] == "NONE") and (params["t2samplespacing"] == "NONE"):
-        if params["avgrdcmethod"] != "NONE":
-            log.warning(
-                '"DwellTime" tag not found. '
-                + "Proceeding without readout distortion correction!"
-            )
-            params["avgrdcmethod"] = "NONE"
+    if not dwell_time:
+        params = check_avgdcmethod(params)
 
     res_spec_templates = [
         "t1template",
@@ -151,6 +143,7 @@ def set_params(gear_args):
             )
         elif params["echodiff"] == "NONE":
             log.warning("echodiff set at NONE.")
+            params = check_avgdcmethod(params)
         elif float(params["echodiff"]) < 0.1:
             log.debug(
                 "Issue in fsl_prepare_fieldmap with incorrect echodiffs or phase ranges [6.283 radians]."
@@ -175,6 +168,38 @@ def set_params(gear_args):
     return params
 
 
+def check_avgdcmethod(params):
+    """There are a couple of special cases to check, so that execution does not hang on
+    incorrectly set parameters
+    Args
+        params (dict): structural parameters that have been populated by the config.json
+                        or other presets.
+    Returns
+        params (dict): updated values
+    """
+
+    # If "DwellTime" is not found in T1w/T2w, skip
+    # readout distortion correction
+    if (params["t1samplespacing"] == "NONE") and (params["t2samplespacing"] == "NONE"):
+        if params["avgrdcmethod"] != "NONE":
+            log.warning(
+                '"DwellTime" tag not found. '
+                + "Proceeding without readout distortion correction!"
+            )
+            params["avgrdcmethod"] = "NONE"
+    # If there is not an echodiff and are no fmap images, then distortion correction should also be NONE
+    if (params["fmapmag"] == 'NONE' and params["fmapphase"] == 'NONE') or (
+        params["avgrdcmethod"] == "GeneralElectricFieldMap"
+        and params["fmapgeneralelectric"] == 'NONE'
+    ):
+        log.warning(
+            "avgrdcmethod was set to %s\nNo fmaps available. Setting to NONE.",
+            params["avgrdcmethod"],
+        )
+        params["avgrdcmethod"] = "NONE"
+    return params
+
+
 def execute(gear_args):
     os.makedirs(
         op.join(gear_args.dirs["bids_dir"], gear_args.common["subject"]), exist_ok=True
@@ -191,17 +216,25 @@ def execute(gear_args):
     if gear_args.fw_specific["gear_dry_run"]:
         log.info("PreFreeSurfer command:\n{command}")
     try:
-        exec_command(
+        stdout, stderr, returncode = exec_command(
             command,
             dry_run=gear_args.fw_specific["gear_dry_run"],
             environ=gear_args.environ,
             stdout_msg=stdout_msg,
         )
-    except RuntimeError as e:
-        log.debug(
-            f"Checking that fsl_prepare_fieldmap is accessible:\n"
-            f'{sp.run(["ls", "-l", "/usr/share/fsl/bin/fsl_prepare_fieldmap"], env=gear_args.environ)}'
-        )
-        gear_args.common["errors"].append(
-            {"message": "DCMethod issue in PreFS.", "exception": e}
-        )
+        if 'error' in stderr.lower() or returncode != 0:
+            gear_args.common["errors"].append(
+                {"message": "PreFS failed. Check log", "exception": stderr}
+            )
+    except Exception as e:
+        if gear_args.fw_specific["gear_dry_run"]:
+            # Error thrown due to non-iterable stdout, stderr, returncode
+            pass
+        else:
+            log.debug(
+                f"Checking that fsl_prepare_fieldmap is accessible:\n"
+                f'{sp.run(["ls", "-l", "/usr/share/fsl/bin/fsl_prepare_fieldmap"], env=gear_args.environ)}'
+            )
+            gear_args.common["errors"].append(
+                {"message": "DCMethod issue in PreFS.", "exception": e}
+            )
