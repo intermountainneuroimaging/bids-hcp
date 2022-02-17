@@ -106,13 +106,12 @@ class bidsInput:
             if "MNINonLinear" not in scan
         ]
         assert len(self.t1ws) > 0, (
-            "No T1w files found for subject %s!"
-            % self.hierarchy["subject_label"].split("-")[-1]
+            f"No T1w files found for subject {self.hierarchy['subject_label'].split('-')[-1]}!"
         )
         gear_args.structural["raw_t1s"] = self.t1ws
 
     def find_t2ws(self, gear_args):
-        """Locate T2-weighted images to be processed."""
+        """Locate (optional) T2-weighted images to be processed."""
         self.t2ws = [
             f.path
             for f in self.layout.get(
