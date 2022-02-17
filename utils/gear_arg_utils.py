@@ -181,7 +181,7 @@ def query_json(fp_list: list, field: str):
                 parameter = params[field]
                 return parameter
             except KeyError:
-                log.error(f"Did not locate {field} value in {json}")
+                log.error(f"Did not locate {field} value in {json_file}")
                 return None
 
 

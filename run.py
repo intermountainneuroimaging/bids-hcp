@@ -25,7 +25,12 @@ def main(gtk_context):
     bids_info = bids_file_locator.bidsInput(gtk_context)
     bids_info.find_bids_files(gear_args)
 
-    e_code = 0
+    if bids_info.error_count > 0:
+        log.info('Please carefully check the error messages to correct'
+                 'your dataset before retrying the gear.')
+        sys.exit(1)
+    else:
+        e_code = 0
     # Structural analysis
     if any("surfer" in arg.lower() for arg in [gear_args.common["stages"]]):
         if not gear_args.structural["avgrdcmethod"] == "NONE":
@@ -72,7 +77,7 @@ if __name__ == "__main__":
     # Singularity help https://singularityhub.github.io/singularity-hpc/r/bids-hcppipelines/
 
     # Get access to gear config, inputs, and sdk client if enabled.
-    with GearToolkitContext() as gtk_context:
+    with GearToolkitContext(config_path='bids-hcp-0.2.4_4.3.0_rc2-620e6db1f9c6908967a0ad5b/config.json') as gtk_context:
         # Initialize logging, set logging level based on `debug` configuration
         # key in gear config.
         gtk_context.init_logging()

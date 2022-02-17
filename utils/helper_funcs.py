@@ -64,7 +64,7 @@ def dcmethods(gear_args, bids_layout, modality):
         files = [list(f.values()) for f in fieldmap_set]
         log.info(f'Available fieldmaps are\n{newline.join(f for x in files for f in x if len(f) > 10)}')
         updated_configs = {}
-        suffixes = [s['suffix'] for s in fieldmap_set]
+        suffixes = [s['suffix'] for s in fieldmap_set if 'suffix' in s]
         if "phasediff" in suffixes:
             try:
                 configs_to_update = siemens_fieldmaps(

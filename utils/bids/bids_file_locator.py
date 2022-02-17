@@ -2,6 +2,7 @@ import logging
 import os
 import os.path as op
 import re
+import sys
 import subprocess as sp
 from glob import glob
 
@@ -21,6 +22,10 @@ class bidsInput:
         information about the type of image selected for analysis."""
         self.gtk_context = gtk_context
         self.config = self.gtk_context.config_json
+        # Use error_count to evaluate all the possible issues with the dataset and return
+        # the whole issue list prior to failing. This method is more efficient than spinning
+        # up a new image for every failure.
+        self.error_count = 0
         self.hierarchy = run_level.get_analysis_run_level_and_hierarchy(
             self.gtk_context.client, self.gtk_context.destination["id"]
         )
@@ -54,6 +59,10 @@ class bidsInput:
                 new_name = "_".join(gear_args.common["gdcoeffs"].split(" "))
                 os.rename(gear_args.common["gdcoeffs"], new_name)
                 gear_args.common["gdcoeffs"] = new_name
+            if not gear_args.common["gdcoeffs"]:
+                log.error('Must have a gradient coefficient file from the manufacturer'
+                          'on the project.')
+                self.error_count +=1
 
         # Use pyBIDS finder method to capture the BIDS structure for these data
         self.layout = BIDSLayout(
@@ -354,6 +363,7 @@ class bidsInput:
                     log.error(
                         f"RuntimeError: EffectiveEchoSpacing or TotalReadoutTime not defined for the fieldmap intended for {op.basename(img)}. The fieldmap is required, please fix your BIDS dataset."
                     )
+                    self.error_count += 1
             return phase_neg, phase_pos, unwarp_dir, echo_spacing
         except UnboundLocalError as e:
             # Cannot continue without an unwarp_dir or valid image list.
