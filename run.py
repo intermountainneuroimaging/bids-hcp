@@ -36,7 +36,7 @@ def main(gtk_context):
         if not gear_args.structural["avgrdcmethod"] == "NONE":
             # Add distortion correction information
             gear_args.structural.update(
-                helper_funcs.dcmethods(gear_args, bids_info.layout, "structural")
+                helper_funcs.set_dcmethods(gear_args, bids_info.layout, "structural")
             )
         e_code += struct_main.run(gear_args)
     elif not gear_args.fw_specific["gear_dry_run"]:

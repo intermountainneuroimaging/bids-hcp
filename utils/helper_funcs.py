@@ -30,7 +30,7 @@ def run_struct_zip_setup(gear_args):
         gear_args.common["hcp_struct_config"] = hcp_struct_config
 
 
-def dcmethods(gear_args, bids_layout, modality):
+def set_dcmethods(gear_args, bids_layout, modality):
     """
     The distortion correction methods require consistent specification of polarity
     directions. This method finds the directions specified in the json sidecar and
@@ -87,7 +87,7 @@ def dcmethods(gear_args, bids_layout, modality):
             except Exception as e:
                 log.error(f"Trying to examine epi fieldmaps encountered:\n{e}")
         else:
-            log.debug(f"fieldmap_set suffix = {fieldmap_set[0]['suffix']}")
+            log.debug(f"fieldmap_set = {fieldmap_set}")
             updated_configs["avgrdcmethod"] = "NONE"
             updated_configs["dcmethod"] = "NONE"
     else:
@@ -99,7 +99,7 @@ def dcmethods(gear_args, bids_layout, modality):
 
 def siemens_fieldmaps(fieldmap_set, bids_layout, gear_args):
     """
-    Submethod to dcmethods to determine the parameters for distortion correction
+    Submethod to set_dcmethods to determine the parameters for distortion correction
     for structural images primarily. Generates a magnitude map and requires a phasediff map.
     Args:
         fieldmap_set (pybids.layout.BIDSlayout.get_fieldmap): object containing
@@ -165,7 +165,7 @@ def siemens_fieldmaps(fieldmap_set, bids_layout, gear_args):
 
 def functional_fieldmaps(fieldmap_set, bids_layout):
     """
-    Submethod to dcmethods to determine the parameters for distortion correction
+    Submethod to set_dcmethods to determine the parameters for distortion correction
     for structural images primarily.
     Args:
         fieldmap_set (pybids.layout.BIDSlayout.get_fieldmap): object containing

@@ -75,7 +75,7 @@ class bidsInput:
         # Each stage seems to require structural scans. Find them before anything else.
         self.find_t1ws(gear_args)
         self.find_t2ws(gear_args)
-        # Fieldmaps are located and manipulated, if necessary, with verify.dcmethods
+        # Fieldmaps are located and manipulated, if necessary, with verify.set_dcmethods
 
         if any("fmri" in arg.lower() for arg in [gear_args.common["stages"]]):
             self.find_bolds(gear_args)

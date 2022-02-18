@@ -36,7 +36,7 @@ def run(gear_args, bids_info):
         gear_args.functional["fmri_scout"] = gear_args.functional["fmri_scouts_all"][i]
         # Add distortion correction information
         gear_args.functional.update(
-            helper_funcs.dcmethods(gear_args, bids_info.layout, "functional")
+            helper_funcs.set_dcmethods(gear_args, bids_info.layout, "functional")
         )
         # Save configurations
         (
