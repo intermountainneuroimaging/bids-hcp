@@ -12,21 +12,21 @@ import subprocess as sp
 from zipfile import ZIP_DEFLATED, ZipFile
 
 import jsonpickle
-
+from flywheel_gear_toolkit import GearToolkitContext
 log = logging.getLogger(__name__)
 
 # ################################################################################
 # # Clean-up and prepare outputs
 
 
-def save_config(gear_args):
+def save_config(gear_args:GearToolkitContext):
     """
     save_config uses the 'output_config' and 'output_config_filename' encapsulated in
     gear_args.common to save selected values from the analysis configuration to the working
     directory of the gear (/flywheel/v0/work).
 
     Args:
-        gear_args: Must contain each of the following attributes with keys/values.
+        gear_args (GearToolkitContext): context with extra fields; must contain each of the following attributes with keys/values.
         (Set by "configs_to_export" in each "*_utils.py".)
             'output_config': A configuration dictionary created for downstream
                 gears in the HCP pipeline
@@ -38,7 +38,7 @@ def save_config(gear_args):
         json.dump(config, f, indent=4)
 
 
-def preserve_safe_list_files(gear_args):
+def preserve_safe_list_files(gear_args:GearToolkitContext):
     """
     preserve_safe_list_files copies the files listed in the 'safe_list' gear_args.common key
     directly to the output directory.  These files are to be presented directly to
@@ -58,7 +58,7 @@ def preserve_safe_list_files(gear_args):
             shutil.copy(fl, gear_args.dirs["output_dir"])
 
 
-def zip_output(gear_args):
+def zip_output(gear_args:GearToolkitContext):
     """
     zip_output Compresses the complete output of the gear
     (in /flywheel/v0/workdir/<Subject>)
@@ -107,7 +107,7 @@ def zip_output(gear_args):
         outzip.close()
 
 
-def zip_pipeline_logs(gear_args):
+def zip_pipeline_logs(gear_args:GearToolkitContext):
     """
     zip_pipeline_logs Compresses files in
     '/flywheel/v0/work/bids/logs' to '/flywheel/v0/output/pipeline_logs.zip'
@@ -144,7 +144,7 @@ def zip_pipeline_logs(gear_args):
             logzipfile.write(os.path.join(root, fl))
 
 
-def export_metadata(gear_args):
+def export_metadata(gear_args:GearToolkitContext):
     """
     If metadata exists (in gear_dict) for this gear write to the
     application. The flywheel sdk is used to write the metadata to the
@@ -180,10 +180,9 @@ def export_metadata(gear_args):
         log.info("No data available to save in .metadata.json.")
 
 
-def cleanup(gear_args):
+def cleanup(gear_args:GearToolkitContext):
     """
-    cleanup is used to complete all of the functions in 'results' and offer a simple
-    interface for the main script to do so.
+    Execute a series of steps to store outputs on the proper containers.
 
     Args:
         gear_args: The gear context object
@@ -201,7 +200,7 @@ def cleanup(gear_args):
     zip_pipeline_logs(gear_args)
     preserve_safe_list_files(gear_args)
     export_metadata(gear_args)
-    create_error_log(gear_args)
+    create_error_log(gear_args.common['errors'])
     # List final directory to log
     log.info("Final output directory listing: gear_args.dirs['output_dir']")
     os.chdir(gear_args.dirs["output_dir"])
@@ -212,7 +211,7 @@ def cleanup(gear_args):
     log.info("\n %s", stdout)
 
 
-def create_error_log(gear_args):
+def create_error_log(errors):
     """Create a log message summarizing the errors and a log of all the arguments used in the
     analysis.
     Args:
@@ -220,17 +219,9 @@ def create_error_log(gear_args):
          containing the 'gear_dict' dictionary attribute with keys/values
          utilized in the called helper functions.
     """
-    if len(gear_args.common["errors"]) > 0:
+    if len(errors) > 0:
         log.info(
-            f"Encountered {len(gear_args.common['errors'])} error(s) during set_params routines. Please check the logs and correct the issues before re-running."
+            f"Encountered {len(errors)} error(s) during set_params routines. Please check the logs and correct the issues before re-running."
         )
-    if gear_args.common["errors"]:
-        log.debug(f'Errors were:\n{gear_args.common["errors"]}')
-
-    # log.info(
-    #     "Logging gear_args as output. Please consult logs particularly to make\n"
-    #     "sure that all necessary files were located and placed in the \n"
-    #     "appropriate modality configurations."
-    # )
-    # with open(op.join(gear_args.dirs["output_dir"], "gear_arg.json"), "w") as fp:
-    #     jsonpickle.encode(gear_args)
+    if errors:
+        log.debug(f'Errors were:\n{errors}')
