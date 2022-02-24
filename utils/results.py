@@ -106,7 +106,7 @@ def zip_output(scan_type, subject, output_dir, bids_dir, exclusions, fmri_name =
         outzip.close()
 
 
-def zip_pipeline_logs(scan_type:str, output_dir:os.Pathlike, bids_dir:os.Pathlike, fmri_name: str = None):
+def zip_pipeline_logs(scan_type:str, output_dir:os.PathLike, bids_dir:os.PathLike, fmri_name: str = None):
     """
     zip_pipeline_logs Compresses files in
     '/flywheel/v0/work/bids/logs' to '/flywheel/v0/output/pipeline_logs.zip'
