@@ -1,47 +1,8 @@
 {
   "author": "Human Connectome Project",
-  "cite": "Glasser M. F., Sotiropoulos S. N., Wilson J. A., Coalson T. S., Fischl B., Andersson J. L., \u2026 Consortium, W. U.-M. H. (2013). The minimal preprocessing pipelines for the Human Connectome Project. NeuroImage, 80, 105\u2013124.",
+  "cite": "Glasser M. F., Sotiropoulos S. N., Wilson J. A., Coalson T. S., Fischl B., Andersson J. L., … Consortium, W. U.-M. H. (2013). The minimal preprocessing pipelines for the Human Connectome Project. NeuroImage, 80, 105–124.",
   "command": "/flywheel/v0/run.py",
   "config": {
-    "reg_name": {
-      "default": "MSMSulc",
-      "description": "Surface registration type: either 'FS' (freesurfer) or 'MSMSulc' (HCP default)",
-      "enum": [
-        "MSMSulc",
-        "FS"
-      ],
-      "type": "string"
-    },
-    "subject": {
-      "description": "Subject ID (use to override session subject id)",
-      "optional": true,
-      "type": "string"
-    },
-    "template_size": {
-      "default": "1mm",
-      "description": "Voxel size of HCP anatomical template. Best if matches input. (Options = 0.7mm, 0.8mm (default), 1mm)",
-      "type": "string"
-    },
-    "temporal_filter": {
-      "description": "HCP default is 200. Change value, if another is desired.",
-      "max": 10000,
-      "min": 0,
-      "optional": true,
-      "type": "integer"
-    },
-    "unwarp_dir_struct": {
-      "default": "z",
-      "description": "Readout direction for structural scans ( 'x', 'x-', 'y', 'y-', 'z', 'z-' ). HCP default = 'z'",
-      "enum": [
-        "x",
-        "x-",
-        "y",
-        "y-",
-        "z",
-        "z-"
-      ],
-      "type": "string"
-    },
     "aseg_csv": {
       "default": true,
       "description": "Write aseg stats to a csv file and analysis metadata.",
@@ -129,6 +90,15 @@
       ],
       "type": "string"
     },
+    "reg_name": {
+      "default": "MSMSulc",
+      "description": "Surface registration type: either 'FS' (freesurfer) or 'MSMSulc' (HCP default)",
+      "enum": [
+        "MSMSulc",
+        "FS"
+      ],
+      "type": "string"
+    },
     "run_label": {
       "description": "[RUN_LABEL [RUN_LABEL ...]] Do not include 'run-', when listing the specific task to include. If left blank, will analyze all runs.",
       "optional": true,
@@ -149,9 +119,39 @@
       "description": "If hcpstruct_zip is available because of previous, valid run, skip straight to the aseg.csv creation. (No FreeSurfer/PostFreeSurfer processing.)",
       "type": "boolean"
     },
+    "subject": {
+      "description": "Subject ID (use to override session subject id)",
+      "optional": true,
+      "type": "string"
+    },
     "task_label": {
       "description": "[TASK_LABEL [TASK_LABEL ...]] Do not include 'task-', when listing the specific task to include. If left blank, will run all tasks.",
       "optional": true,
+      "type": "string"
+    },
+    "template_size": {
+      "default": "1mm",
+      "description": "Voxel size of HCP anatomical template. Best if matches input. (Options = 0.7mm, 0.8mm (default), 1mm)",
+      "type": "string"
+    },
+    "temporal_filter": {
+      "description": "HCP default is 200. Change value, if another is desired.",
+      "max": 10000,
+      "min": 0,
+      "optional": true,
+      "type": "integer"
+    },
+    "unwarp_dir_struct": {
+      "default": "z",
+      "description": "Readout direction for structural scans ( 'x', 'x-', 'y', 'y-', 'z', 'z-' ). HCP default = 'z'",
+      "enum": [
+        "x",
+        "x-",
+        "y",
+        "y-",
+        "z",
+        "z-"
+      ],
       "type": "string"
     }
   },
