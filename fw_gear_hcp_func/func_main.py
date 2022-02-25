@@ -30,20 +30,21 @@ def run(gear_args, bids_layout):
     helper_funcs.run_struct_zip_setup(gear_args)
 
     for i, fmri_name in enumerate(gear_args.functional["fmri_names"]):
-        set_func_args(gear_args, bids_layout, fmri_name, i)
+            set_func_args_single_file(gear_args, fmri_name, i)
 
-        if ("Volume" in gear_args.common["stages"]) and (rc == 0):
-            log.debug("Building and running fMRI Volume pipeline.")
-            rc = run_fmri_vol(gear_args)
+    rc = set_func_args_list(gear_args, bids_layout)
+    if ("Volume" in gear_args.common["stages"]) and (rc == 0):
+        log.debug("Building and running fMRI Volume pipeline.")
+        rc = run_fmri_vol(gear_args)
 
-        if ("Surface" in gear_args.common["stages"]) and (rc == 0):
-            log.debug("Building and running fMRI Surface pipeline.")
-            rc = run_fmri_surf(gear_args)
+    if ("Surface" in gear_args.common["stages"]) and (rc == 0):
+        log.debug("Building and running fMRI Surface pipeline.")
+        rc = run_fmri_surf(gear_args)
 
-        # Generate HCP-Functional QC Images
-        # QC script was written for specific type of DCMethod
-        if rc == 0:
-            run_func_qc(gear_args)
+    # Generate HCP-Functional QC Images
+    # QC script was written for specific type of DCMethod
+    if rc == 0:
+        run_func_qc(gear_args)
     return rc
 
 
@@ -107,7 +108,7 @@ def run_func_qc(gear_args):
         helper_funcs.report_failure(gear_args, e, "Functional QC")
 
 
-def set_func_args(gear_args, bids_layout, specific_scan_name, scan_number_in_list):
+def set_func_args_single_file(gear_args, specific_scan_name, scan_number_in_list):
     """Set the pre-requisite information that will be used to build the shell commands for functional processing."""
     gear_args.functional["fmri_name"] = specific_scan_name
     gear_args.functional["fmri_timecourse"] = gear_args.functional[
@@ -117,6 +118,7 @@ def set_func_args(gear_args, bids_layout, specific_scan_name, scan_number_in_lis
         scan_number_in_list
     ]
 
+def set_func_args_list(gear_args,bids_layout):
     # Add distortion correction information
     gear_args.functional.update(
         helper_funcs.set_dcmethods(gear_args, bids_layout, "functional")
@@ -127,10 +129,11 @@ def set_func_args(gear_args, bids_layout, specific_scan_name, scan_number_in_lis
             'Please find needed fmaps or request "LegacyStyleData" mode to be '
             "added to the gear."
         )
-        sys.exit(1)
+        return 1
 
     # Set save configurations
     (
         gear_args.common["output_config"],
         gear_args.common["output_config_filename"],
     ) = func_utils.configs_to_export(gear_args)
+    return 0
