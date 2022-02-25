@@ -44,15 +44,21 @@ def set_dcmethods(gear_args, bids_layout, modality):
     updated_configs = {}
 
     if modality == "structural":
-        fieldmap_set = check_intended_for_fmaps(bids_layout, gear_args.dirs['bids_dir'], gear_args.structural["raw_t1s"][0])
-        #fieldmap_set = bids_layout.get_fieldmap(
+        fieldmap_set = check_intended_for_fmaps(
+            bids_layout, gear_args.dirs["bids_dir"], gear_args.structural["raw_t1s"][0]
+        )
+        # fieldmap_set = bids_layout.get_fieldmap(
         #    gear_args.structural["raw_t1s"][0], return_list=True
-        #)
+        # )
     elif modality == "functional":
-        fieldmap_set = check_intended_for_fmaps(bids_layout, gear_args.dirs['bids_dir'], gear_args.functional["fmri_timecourse"])
-        #fieldmap_set = bids_layout.get_fieldmap(
+        fieldmap_set = check_intended_for_fmaps(
+            bids_layout,
+            gear_args.dirs["bids_dir"],
+            gear_args.functional["fmri_timecourse"],
+        )
+        # fieldmap_set = bids_layout.get_fieldmap(
         #    gear_args.functional["fmri_timecourse"], return_list=True
-        #)
+        # )
     else:
         log.error(f"Fieldmap method not defined for {modality}")
 
@@ -62,9 +68,11 @@ def set_dcmethods(gear_args, bids_layout, modality):
         )
         newline = "\n"
         files = [list(f.values()) for f in fieldmap_set]
-        log.info(f'Available fieldmaps are\n{newline.join(f for x in files for f in x if len(f) > 10)}')
+        log.info(
+            f"Available fieldmaps are\n{newline.join(f for x in files for f in x if len(f) > 10)}"
+        )
         updated_configs = {}
-        suffixes = [s['suffix'] for s in fieldmap_set if 'suffix' in s]
+        suffixes = [s["suffix"] for s in fieldmap_set if "suffix" in s]
         if "phasediff" in suffixes:
             try:
                 configs_to_update = siemens_fieldmaps(
@@ -73,21 +81,23 @@ def set_dcmethods(gear_args, bids_layout, modality):
                 updated_configs.update(configs_to_update)
             except Exception as e:
                 log.error(f"Trying to use phasediff encountered:\n{e}")
-        elif ('epi' in suffixes) and len(fieldmap_set) == 2:
+        elif ("epi" in suffixes) and len(fieldmap_set) == 2:
             # Not totally sure it should always point to the same config file, but this is the file lister
             # in the original GenericfMRIVolumeProcessingPipeline
             try:
                 updated_configs["topupconfig"] = op.join(
                     gear_args.environ["HCPPIPEDIR_Config"], "b02b0.cnf"
                 )
-                configs_to_update = functional_fieldmaps(
-                    fieldmap_set, bids_layout
-                )
+                configs_to_update = functional_fieldmaps(fieldmap_set, bids_layout)
                 updated_configs.update(configs_to_update)
             except Exception as e:
                 log.error(f"Trying to examine epi fieldmaps encountered:\n{e}")
         else:
-            log.debug(f"fieldmap_set = {fieldmap_set}")
+            log.info(
+                f"Possible danger!\n"
+                f"fieldmap_set = {fieldmap_set}\n"
+                f"Is this enough for your distortion correction method?"
+            )
             updated_configs["avgrdcmethod"] = "NONE"
             updated_configs["dcmethod"] = "NONE"
     else:
@@ -117,14 +127,22 @@ def siemens_fieldmaps(fieldmap_set, bids_layout, gear_args):
         merged_file = op.join(pth, "magfile.nii.gz")
         if "magnitude1" not in fieldmap_set[0]:
             try:
-                log.debug(f'BIDS Curation did not list magnitude files as being intended for the same scan(s) as the phasediff file.\n'
-                          f'Attempting to locate the corresponding mag files.')
-                fieldmap_set[0]["magnitude1"] = glob(op.join(pth, '*_magnitude1.nii*'))[0]
-                fieldmap_set[0]["magnitude2"] = glob(op.join(pth, '*_magnitude2.nii*'))[0]
+                log.debug(
+                    f"BIDS Curation did not list magnitude files as being intended for the same scan(s) as the phasediff file.\n"
+                    f"Attempting to locate the corresponding mag files."
+                )
+                fieldmap_set[0]["magnitude1"] = glob(op.join(pth, "*_magnitude1.nii*"))[
+                    0
+                ]
+                fieldmap_set[0]["magnitude2"] = glob(op.join(pth, "*_magnitude2.nii*"))[
+                    0
+                ]
             except:
-                log.error(f'BIDS Curation was incorrect for magnitude images and this\n'
-                          f'gear could not automatically correct the curation. Please\n'
-                          f'revisit the curation and try to re-run the gear.')
+                log.error(
+                    f"BIDS Curation was incorrect for magnitude images and this\n"
+                    f"gear could not automatically correct the curation. Please\n"
+                    f"revisit the curation and try to re-run the gear."
+                )
                 sys.exit(1)
         sp.run(
             [
@@ -225,7 +243,8 @@ def functional_fieldmaps(fieldmap_set, bids_layout):
     }
     return configs_to_update
 
-def report_failure(gear_args, exception, stage, level='nonfatal'):
+
+def report_failure(gear_args, exception, stage, level="nonfatal"):
     """
     Simple, consistent reporting for errors at any stage
     Args:
@@ -234,13 +253,13 @@ def report_failure(gear_args, exception, stage, level='nonfatal'):
         stage (str): description of the processing point, where the failure occurred
         level (str): fatal will exit with code 1, nonfatal will continue execution.
     """
-    gear_args.common['errors'].append({'stage': stage, 'Exception': exception})
+    gear_args.common["errors"].append({"stage": stage, "Exception": exception})
     log.info(stage)
     log.exception(exception)
 
     if gear_args.fw_specific["gear_save_on_error"]:
         results.cleanup(gear_args)
-    if level == 'fatal':
+    if level == "fatal":
         return 1
 
 
@@ -262,15 +281,15 @@ def check_intended_for_fmaps(bids_layout, bids_dir, filepath):
                 jdata = json.loads(j.read())
                 if any(p in filepath for p in jdata["IntendedFor"]):
                     jfile_suffix = jfile.split("_")[-1].split(".")[0]
-                    jfile = glob(op.splitext(jfile)[0] + '.nii*')[0]
+                    jfile = glob(op.splitext(jfile)[0] + ".nii*")[0]
                     try:
-                        fieldmap_set[ix].update({jfile_suffix:jfile})
+                        fieldmap_set[ix].update({jfile_suffix: jfile})
                     except IndexError:
-                        fieldmap_set.append({jfile_suffix:jfile})
+                        fieldmap_set.append({jfile_suffix: jfile})
 
-                    if jfile_suffix in ['phasediff', 'epi']:
-                        fieldmap_set[ix].update({'suffix': jfile_suffix})
-                        ix +=1
+                    if jfile_suffix in ["phasediff", "epi"]:
+                        fieldmap_set[ix].update({"suffix": jfile_suffix})
+                        ix += 1
     except Exception as e:
         log.exception(e)
 
@@ -278,7 +297,9 @@ def check_intended_for_fmaps(bids_layout, bids_dir, filepath):
         # Even though the structure had to be initialized, an empty set should
         # trigger the secondary check below and skip fieldmap processing later, if
         # there are legitimately no IntendedFors.
-        log.info(f"Using BIDSLayout method, as {filepath} did not return a match in the fmap jsons.")
+        log.info(
+            f"Using BIDSLayout method, as {filepath} did not return a match in the fmap jsons."
+        )
         # "BACKUP" method
         fieldmap_set = bids_layout.get_fieldmap(filepath, return_list=True)
     return fieldmap_set
