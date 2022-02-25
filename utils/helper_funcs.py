@@ -94,9 +94,10 @@ def set_dcmethods(gear_args, bids_layout, modality):
                 log.error(f"Trying to examine epi fieldmaps encountered:\n{e}")
         else:
             log.info(
-                f"Possible danger!\n"
+                f"Possible danger\n"
                 f"fieldmap_set = {fieldmap_set}\n"
-                f"Is this enough for your distortion correction method?"
+                f"Is this enough for your distortion correction method?\n"
+                f"Make sure both directions are listed in the IntendedFors, not just the matching direction."
             )
             updated_configs["avgrdcmethod"] = "NONE"
             updated_configs["dcmethod"] = "NONE"
@@ -279,7 +280,7 @@ def check_intended_for_fmaps(bids_layout, bids_dir, filepath):
         for jfile in jsons:
             with open(jfile, "r") as j:
                 jdata = json.loads(j.read())
-                if any(p in filepath for p in jdata["IntendedFor"]):
+                if any(p in op.basename(filepath) for p in jdata["IntendedFor"]):
                     jfile_suffix = jfile.split("_")[-1].split(".")[0]
                     jfile = glob(op.splitext(jfile)[0] + ".nii*")[0]
                     try:
