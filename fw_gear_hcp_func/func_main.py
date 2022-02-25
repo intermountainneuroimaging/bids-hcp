@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-from glob import glob
 import logging
 import os.path as op
 import sys
+from glob import glob
 
 from fw_gear_hcp_func import (
     GenericfMRISurfaceProcessingPipeline,
@@ -15,7 +15,7 @@ from utils import helper_funcs, results
 log = logging.getLogger(__name__)
 
 
-def run(gear_args, bids_info):
+def run(gear_args, bids_layout):
     """
     Set up and complete the fMRIVolume and/or fMRISurface stages of the HCP Pipeline.
     Args:
@@ -24,25 +24,13 @@ def run(gear_args, bids_info):
         rc (int): return code
     """
     rc = 0
-    gear_args.common['scan_type'] = 'func'
+    # Add current stage to common for reporting
+    gear_args.common["scan_type"] = "func"
     # Get file list and configuration from hcp-struct zipfile
     helper_funcs.run_struct_zip_setup(gear_args)
 
     for i, fmri_name in enumerate(gear_args.functional["fmri_names"]):
-        gear_args.functional["fmri_name"] = fmri_name
-        gear_args.functional["fmri_timecourse"] = gear_args.functional[
-            "fmri_timecourse_all"
-        ][i]
-        gear_args.functional["fmri_scout"] = gear_args.functional["fmri_scouts_all"][i]
-        # Add distortion correction information
-        gear_args.functional.update(
-            helper_funcs.set_dcmethods(gear_args, bids_info.layout, "functional")
-        )
-        # Save configurations
-        (
-            gear_args.common["output_config"],
-            gear_args.common["output_config_filename"],
-        ) = func_utils.configs_to_export(gear_args)
+        set_func_args(gear_args, bids_layout, fmri_name, i)
 
         if ("Volume" in gear_args.common["stages"]) and (rc == 0):
             log.debug("Building and running fMRI Volume pipeline.")
@@ -54,10 +42,7 @@ def run(gear_args, bids_info):
 
         # Generate HCP-Functional QC Images
         # QC script was written for specific type of DCMethod
-        if (
-#            gear_args.fw_specific["gear_dry_run"] is False
-            (rc == 0)
-        ):
+        if rc == 0:
             run_func_qc(gear_args)
     return rc
 
@@ -74,8 +59,6 @@ def run_fmri_vol(gear_args):
         rc = helper_funcs.report_failure(
             gear_args, e, "Build params for fMRI volume processing", "fatal"
         )
-
-
 
     try:
         GenericfMRIVolumeProcessingPipeline.execute(gear_args)
@@ -117,8 +100,37 @@ def run_func_qc(gear_args):
         results.zip_output(gear_args)
         hcpfunc_qc_mosaic.set_params(gear_args)
         hcpfunc_qc_mosaic.execute(gear_args)
-        log.debug('Zipping functional outputs.')
+        log.debug("Zipping functional outputs.")
         # Clean-up and output prep
         results.cleanup(gear_args)
     except Exception as e:
         helper_funcs.report_failure(gear_args, e, "Functional QC")
+
+
+def set_func_args(gear_args, bids_layout, specific_scan_name, scan_number_in_list):
+    """Set the pre-requisite information that will be used to build the shell commands for functional processing."""
+    gear_args.functional["fmri_name"] = specific_scan_name
+    gear_args.functional["fmri_timecourse"] = gear_args.functional[
+        "fmri_timecourse_all"
+    ][scan_number_in_list]
+    gear_args.functional["fmri_scout"] = gear_args.functional["fmri_scouts_all"][
+        scan_number_in_list
+    ]
+
+    # Add distortion correction information
+    gear_args.functional.update(
+        helper_funcs.set_dcmethods(gear_args, bids_layout, "functional")
+    )
+    if gear_args.functional["dcmethod"] == "NONE":
+        log.critical(
+            "Must use a distortion correction method for fMRI Volume Processing. "
+            'Please find needed fmaps or request "LegacyStyleData" mode to be '
+            "added to the gear."
+        )
+        sys.exit(1)
+
+    # Set save configurations
+    (
+        gear_args.common["output_config"],
+        gear_args.common["output_config_filename"],
+    ) = func_utils.configs_to_export(gear_args)

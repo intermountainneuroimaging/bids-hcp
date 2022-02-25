@@ -199,12 +199,12 @@ def cleanup(gear_args:GearToolkitContext):
                gear_args.dirs["output_dir"],
                gear_args.dirs["bids_dir"],
                gear_args.common["exclude_from_output"],
-               gear_args.common['fmri_name'],
+               gear_args.functional['fmri_name'],
                gear_args.fw_specific["gear_dry_run"])
     zip_pipeline_logs(gear_args.common["scan_type"],
                       gear_args.dirs["output_dir"],
                       gear_args.dirs["bids_dir"],
-                      gear_args.common['fmri_name'])
+                      gear_args.functional['fmri_name'])
     preserve_safe_list_files(gear_args.common["safe_list"],
                              gear_args.dirs["output_dir"],
                              gear_args.fw_specific["gear_dry_run"])
