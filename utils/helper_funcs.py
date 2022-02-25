@@ -96,7 +96,7 @@ def set_dcmethods(gear_args, bids_layout, modality):
             log.info(
                 f"Possible danger\n"
                 f"fieldmap_set = {fieldmap_set}\n"
-                f"Is this enough for your distortion correction method?\n"
+                f"Is these the correct number and type of fmaps for your distortion correction method?\n"
                 f"Make sure both directions are listed in the IntendedFors, not just the matching direction."
             )
             updated_configs["avgrdcmethod"] = "NONE"
