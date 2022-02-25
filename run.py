@@ -77,7 +77,7 @@ if __name__ == "__main__":
     # Singularity help https://singularityhub.github.io/singularity-hpc/r/bids-hcppipelines/
 
     # Get access to gear config, inputs, and sdk client if enabled.
-    with GearToolkitContext(config_path='bids-hcp-0.2.4c_4.3.0_rc2-621011a6eb2a6aa9b46e5ea8/config.json') as gtk_context:
+    with GearToolkitContext() as gtk_context:
         # Initialize logging, set logging level based on `debug` configuration
         # key in gear config.
         gtk_context.init_logging()
