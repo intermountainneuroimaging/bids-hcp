@@ -149,7 +149,7 @@ RUN echo "bids-hcp" > /etc/hostname \
 #    echo "127.0.1.1 bids-hcp" >> /etc/hosts
 
 # Installing main dependencies
-ENV FLYWHEEL=/flywheel/v0
+ARG FLYWHEEL=/flywheel/v0
 COPY pyproject.toml poetry.lock $FLYWHEEL/
 RUN poetry install
 

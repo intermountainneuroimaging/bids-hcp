@@ -29,7 +29,7 @@ def run(gear_args):
     Returns:
         rc (int): return code
     """
-    gear_args.common['scan_type'] = 'struct'
+    gear_args.common["scan_type"] = "struct"
     rc = 0
     check_FS_install(gear_args)
 
@@ -119,7 +119,7 @@ def run_preFS(gear_args):
         )
     ###########################################################################
 
-    if not gear_args.common["errors"]:
+    if rc == 0:
         # Run PreFreeSurferPipeline.sh from subprocess.run
         try:
             log.debug("Executing PreFreeSurfer command.")
@@ -156,7 +156,7 @@ def run_FS(gear_args):
             gear_args, e, "Build params for FreeSurfer", "fatal"
         )
 
-    if not gear_args.common["errors"]:
+    if rc == 0:
         # Run FreeSurferPipeline.sh from subprocess.run
         try:
             FreeSurfer.execute(gear_args)
@@ -202,8 +202,8 @@ def run_postFS(gear_args):
         )
 
     # Run PostFreeSurferPipeline.sh from subprocess.run
-    if not gear_args.common["errors"]:
-        if gear_args.structural["stats_only"]:
+    if rc == 0:
+        if "stats_only" in gear_args.structural:
             log.info("Skipping straight to compiling stats.")
         else:
             try:

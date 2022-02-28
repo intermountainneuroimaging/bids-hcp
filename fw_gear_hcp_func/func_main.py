@@ -30,7 +30,7 @@ def run(gear_args, bids_layout):
     helper_funcs.run_struct_zip_setup(gear_args)
 
     for i, fmri_name in enumerate(gear_args.functional["fmri_names"]):
-            set_func_args_single_file(gear_args, fmri_name, i)
+        set_func_args_single_file(gear_args, fmri_name, i)
 
     rc = set_func_args_list(gear_args, bids_layout)
     if ("Volume" in gear_args.common["stages"]) and (rc == 0):
@@ -60,13 +60,13 @@ def run_fmri_vol(gear_args):
         rc = helper_funcs.report_failure(
             gear_args, e, "Build params for fMRI volume processing", "fatal"
         )
-
-    try:
-        GenericfMRIVolumeProcessingPipeline.execute(gear_args)
-    except Exception as e:
-        rc = helper_funcs.report_failure(
-            gear_args, e, "Executing fMRI volume processing", "fatal"
-        )
+    if rc == 0:
+        try:
+            GenericfMRIVolumeProcessingPipeline.execute(gear_args)
+        except Exception as e:
+            rc = helper_funcs.report_failure(
+                gear_args, e, "Executing fMRI volume processing", "fatal"
+            )
     return rc
 
 
@@ -79,7 +79,7 @@ def run_fmri_surf(gear_args):
         rc = helper_funcs.report_failure(
             gear_args, e, "Build params for fMRI surface processing", "fatal"
         )
-    if not gear_args.common["errors"]:
+    if rc == 0:
         # Execute fMRI Surface Pipeline
         try:
             GenericfMRISurfaceProcessingPipeline.execute(gear_args)
@@ -118,7 +118,8 @@ def set_func_args_single_file(gear_args, specific_scan_name, scan_number_in_list
         scan_number_in_list
     ]
 
-def set_func_args_list(gear_args,bids_layout):
+
+def set_func_args_list(gear_args, bids_layout):
     # Add distortion correction information
     gear_args.functional.update(
         helper_funcs.set_dcmethods(gear_args, bids_layout, "functional")

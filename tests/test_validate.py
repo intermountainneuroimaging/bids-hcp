@@ -13,14 +13,8 @@ import pytest
 
 from utils.bids.validate import validate_bids
 
-inputs = glob(op.join(op.dirname(__file__), "data", "*json"))
-for f in inputs:
-    name = op.basename(f)
-    o = op.join(op.dirname(op.dirname(__file__)), "tmp", name)
-    copy(f, o)
-
 FWV0 = Path.cwd()
-DATA_ROOT = Path("data").resolve()
+DATA_ROOT = Path("tests/data").resolve()
 
 
 @pytest.fixture(scope="function")

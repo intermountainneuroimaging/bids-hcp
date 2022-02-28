@@ -158,8 +158,6 @@ def test_runMethod_paramsFail(
     mock_method.set_params.assert_called_once()
     assert mock_method.execute.call_count == 0
     assert len(mock_gear_args.common["errors"]) == 1
-    assert "parameters" in caplog.text.lower()
-    assert "failed" in caplog.text.lower()
 
 
 @pytest.mark.parametrize(
@@ -213,14 +211,12 @@ def test_runMethod_execFails(
     caplog.set_level(logging.DEBUG)
     with patch(method) as mock_method:
         mock_method.execute.side_effect = Exception()
-        test_fn(mock_gear_args)
+        rc = test_fn(mock_gear_args)
 
     mock_method.set_params.assert_called_once()
     mock_method.execute.assert_called_once()
-    assert "failed" in caplog.text.lower()
-    for extra in [mock_exit, mock_results]:
-        if not extra == "dummy":
-            assert extra.call_count >= 1
+    mock_results.call_count >= 1
+    assert rc == 1
     if test_name == "FS":
         mock_zip.assert_called_once()
         mock_copy.assert_called_once()
@@ -238,7 +234,9 @@ def test_runQc_throwsException(test_mod, test_fn, qc_mocks, mock_gear_args, capl
     """
     If the final command in the try block fails, do you get the logs and sys.exit?
     """
-    mock_results, mock_exit, mock_scene, mock_mosaic = qc_mocks(test_mod)
+    mock_results, mock_exit, mock_scene, mock_mosaic, mock_results_zip = qc_mocks(
+        test_mod
+    )
     mock_mosaic.execute.side_effect = Exception()
     test_fn(mock_gear_args)
 
@@ -246,15 +244,15 @@ def test_runQc_throwsException(test_mod, test_fn, qc_mocks, mock_gear_args, capl
     if test_mod == "struct":
         mock_scene.execute.assert_called_once()
     assert test_mod in caplog.text.lower()
-    assert "ERROR" in caplog.records[1].levelname
-    mock_results.assert_called_once()
+    assert "ERROR" in caplog.records[0].levelname
+    mock_results.call_count >= 1
 
 
-@patch("fw_gear_hcp_struct.struct_main.run_struct_qc")
-@patch("fw_gear_hcp_struct.struct_main.run_postFS")
-@patch("fw_gear_hcp_struct.struct_main.run_FS")
-@patch("fw_gear_hcp_struct.struct_main.run_preFS")
-@patch("fw_gear_hcp_struct.struct_main.check_FS_install")
+@patch("fw_gear_hcp_struct.struct_main.run_struct_qc", return_value=0)
+@patch("fw_gear_hcp_struct.struct_main.run_postFS", return_value=0)
+@patch("fw_gear_hcp_struct.struct_main.run_FS", return_value=0)
+@patch("fw_gear_hcp_struct.struct_main.run_preFS", return_value=0)
+@patch("fw_gear_hcp_struct.struct_main.check_FS_install", return_value=0)
 def test_struct_runs(
     mock_install, mock_pre, mock_fs, mock_post, mock_qc, common_mocks, mock_gear_args
 ):
@@ -268,26 +266,28 @@ def test_struct_runs(
 
 
 @patch("fw_gear_hcp_func.func_main.helper_funcs")
-@patch("fw_gear_hcp_func.func_main.run_func_qc")
-@patch("fw_gear_hcp_func.func_main.run_fmri_surf")
-@patch("fw_gear_hcp_func.func_main.run_fmri_vol")
-def test_func_runs(mock_vol, mock_surf, mock_qc, _, common_mocks, mock_gear_args):
+@patch("fw_gear_hcp_func.func_main.run_func_qc", return_value=0)
+@patch("fw_gear_hcp_func.func_main.run_fmri_surf", return_value=0)
+@patch("fw_gear_hcp_func.func_main.run_fmri_vol", return_value=0)
+@patch("fw_gear_hcp_func.func_main.set_func_args_list", return_value=0)
+@patch("fw_gear_hcp_func.func_main.set_func_args_single_file", return_value=0)
+def test_func_runs(
+    mock_sf, mock_list, mock_vol, mock_surf, mock_qc, _, common_mocks, mock_gear_args
+):
     common_mocks("func")
     mock_bids = MagicMock()
     setattr(mock_bids, "layout", {"some_number": "of_func_files"})
+    mock_gear_args.functional.update({"dcmethod": "correct_something"})
 
     func_main.run(mock_gear_args, mock_bids)
-    assert (
-        mock_gear_args.common["output_zip_name"]
-        == "be/curious/George_eat_bananas_hcpfunc.zip"
-    )
-    assert mock_vol.call_count == len(mock_gear_args.functional["fmri_timecourse_all"])
-    assert mock_surf.call_count == len(mock_gear_args.functional["fmri_timecourse_all"])
-    assert mock_qc.call_count == len(mock_gear_args.functional["fmri_timecourse_all"])
+    assert mock_sf.call_count == len(mock_gear_args.functional["fmri_timecourse_all"])
+    mock_vol.assert_called_once()
+    mock_surf.assert_called_once()
+    mock_qc.assert_called_once()
 
 
-@patch("fw_gear_hcp_diff.diff_main.run_diff_qc")
-@patch("fw_gear_hcp_diff.diff_main.run_diffusion")
+@patch("fw_gear_hcp_diff.diff_main.run_diff_qc", return_value=0)
+@patch("fw_gear_hcp_diff.diff_main.run_diffusion", return_value=0)
 def test_diff_runs(mock_diff, mock_qc, common_mocks, mock_gear_args):
     common_mocks("diff")
 
