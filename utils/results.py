@@ -14,6 +14,7 @@ from zipfile import ZIP_DEFLATED, ZipFile
 
 import jsonpickle
 from flywheel_gear_toolkit import GearToolkitContext
+
 log = logging.getLogger(__name__)
 
 # ################################################################################

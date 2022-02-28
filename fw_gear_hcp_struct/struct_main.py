@@ -14,7 +14,7 @@ from fw_gear_hcp_struct import (
     hcpstruct_qc_scenes,
     struct_utils,
 )
-from utils import gear_arg_utils, results, helper_funcs
+from utils import gear_arg_utils, helper_funcs, results
 
 log = logging.getLogger(__name__)
 

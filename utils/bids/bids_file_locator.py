@@ -2,8 +2,8 @@ import logging
 import os
 import os.path as op
 import re
-import sys
 import subprocess as sp
+import sys
 from glob import glob
 
 import nibabel

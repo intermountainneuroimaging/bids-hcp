@@ -78,6 +78,7 @@ class GearArgs:
             {
                 "subject": gear_arg_utils.set_subject(gtk_context),
                 "current_stage": self.common["stages"].split()[0],
+                "exclude_from_output": None,
                 "errors": [],
                 "safe_list": [],
             }
