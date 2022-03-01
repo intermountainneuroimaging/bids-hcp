@@ -58,7 +58,9 @@ def preserve_safe_list_files(safe_list, output_dir, dry_run=False):
             shutil.copy(fl, output_dir)
 
 
-def zip_output(scan_type, subject, output_dir, bids_dir, exclusions, fmri_name = None, dry_run=False):
+def zip_output(
+    scan_type, subject, output_dir, bids_dir, exclusions, fmri_name=None, dry_run=False
+):
     """
     zip_output Compresses the complete output of the gear
     (in /flywheel/v0/workdir/<Subject>)
@@ -75,14 +77,10 @@ def zip_output(scan_type, subject, output_dir, bids_dir, exclusions, fmri_name =
     """
     if {scan_type} == "func":
         output_zipname = op.join(
-            output_dir,
-            f"{subject}_{fmri_name}_hcp{scan_type}.zip",
+            output_dir, f"{subject}_{fmri_name}_hcp{scan_type}.zip",
         )
     else:
-        output_zipname = op.join(
-            output_dir,
-            f"{subject}_hcp{scan_type}.zip",
-        )
+        output_zipname = op.join(output_dir, f"{subject}_hcp{scan_type}.zip",)
 
     if exclusions:
         exclude_from_output = exclusions
@@ -107,7 +105,12 @@ def zip_output(scan_type, subject, output_dir, bids_dir, exclusions, fmri_name =
         outzip.close()
 
 
-def zip_pipeline_logs(scan_type:str, output_dir:os.PathLike, bids_dir:os.PathLike, fmri_name: str = None):
+def zip_pipeline_logs(
+    scan_type: str,
+    output_dir: os.PathLike,
+    bids_dir: os.PathLike,
+    fmri_name: str = None,
+):
     """
     zip_pipeline_logs Compresses files in
     '/flywheel/v0/work/bids/logs' to '/flywheel/v0/output/pipeline_logs.zip'
@@ -118,15 +121,9 @@ def zip_pipeline_logs(scan_type:str, output_dir:os.PathLike, bids_dir:os.PathLik
 
     # zip pipeline logs
     if {scan_type} == "func":
-        log_zipname = op.join(
-            output_dir,
-            f"{fmri_name}_{scan_type}_pipeline_logs.zip",
-        )
+        log_zipname = op.join(output_dir, f"{fmri_name}_{scan_type}_pipeline_logs.zip",)
     else:
-        log_zipname = op.join(
-            output_dir,
-            f"{scan_type}_pipeline_logs.zip",
-        )
+        log_zipname = op.join(output_dir, f"{scan_type}_pipeline_logs.zip",)
     log.info("Zipping pipeline logs to %s", log_zipname)
 
     try:
@@ -142,7 +139,7 @@ def zip_pipeline_logs(scan_type:str, output_dir:os.PathLike, bids_dir:os.PathLik
             logzipfile.write(os.path.join(root, fl))
 
 
-def export_metadata(gear_args:GearToolkitContext):
+def export_metadata(gear_args: GearToolkitContext):
     """
     If metadata exists (in gear_dict) for this gear write to the
     application. The flywheel sdk is used to write the metadata to the
@@ -178,7 +175,7 @@ def export_metadata(gear_args:GearToolkitContext):
         log.info("No data available to save in .metadata.json.")
 
 
-def cleanup(gear_args:GearToolkitContext):
+def cleanup(gear_args: GearToolkitContext):
     """
     Execute a series of steps to store outputs on the proper containers.
 
@@ -193,24 +190,31 @@ def cleanup(gear_args:GearToolkitContext):
     for fl in png_files:
         shutil.copy(fl, gear_args.dirs["output_dir"] + "/")
 
-    save_config(gear_args.common["output_config"],
-                gear_args.common["output_config_filename"])
-    zip_output(gear_args.common["scan_type"],
-               gear_args.common['subject'],
-               gear_args.dirs["output_dir"],
-               gear_args.dirs["bids_dir"],
-               gear_args.common["exclude_from_output"],
-               gear_args.functional['fmri_name'],
-               gear_args.fw_specific["gear_dry_run"])
-    zip_pipeline_logs(gear_args.common["scan_type"],
-                      gear_args.dirs["output_dir"],
-                      gear_args.dirs["bids_dir"],
-                      gear_args.functional['fmri_name'])
-    preserve_safe_list_files(gear_args.common["safe_list"],
-                             gear_args.dirs["output_dir"],
-                             gear_args.fw_specific["gear_dry_run"])
+    save_config(
+        gear_args.common["output_config"], gear_args.common["output_config_filename"]
+    )
+    zip_output(
+        gear_args.common["scan_type"],
+        gear_args.common["subject"],
+        gear_args.dirs["output_dir"],
+        gear_args.dirs["bids_dir"],
+        gear_args.common["exclude_from_output"],
+        gear_args.functional["fmri_name"],
+        gear_args.fw_specific["gear_dry_run"],
+    )
+    zip_pipeline_logs(
+        gear_args.common["scan_type"],
+        gear_args.dirs["output_dir"],
+        gear_args.dirs["bids_dir"],
+        gear_args.functional["fmri_name"],
+    )
+    preserve_safe_list_files(
+        gear_args.common["safe_list"],
+        gear_args.dirs["output_dir"],
+        gear_args.fw_specific["gear_dry_run"],
+    )
     export_metadata(gear_args)
-    create_error_log(gear_args.common['errors'])
+    create_error_log(gear_args.common["errors"])
     # List final directory to log
     log.info("Final output directory listing: gear_args.dirs['output_dir']")
     os.chdir(gear_args.dirs["output_dir"])
@@ -234,4 +238,4 @@ def create_error_log(errors):
             f"Encountered {len(errors)} error(s) during set_params routines. Please check the logs and correct the issues before re-running."
         )
     if errors:
-        log.debug(f'Errors were:\n{errors}')
+        log.debug(f"Errors were:\n{errors}")

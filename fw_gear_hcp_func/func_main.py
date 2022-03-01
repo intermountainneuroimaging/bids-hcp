@@ -98,14 +98,20 @@ def run_func_qc(gear_args):
         png files: subject-derived results are overlaid on template images.
     """
     try:
-        results.zip_output(gear_args)
+        results.zip_output(gear_args.common["scan_type"],
+               gear_args.common['subject'],
+               gear_args.dirs["output_dir"],
+               gear_args.dirs["bids_dir"],
+               gear_args.common["exclude_from_output"],
+               gear_args.functional['fmri_name'],
+               gear_args.fw_specific["gear_dry_run"])
         hcpfunc_qc_mosaic.set_params(gear_args)
         hcpfunc_qc_mosaic.execute(gear_args)
         log.debug("Zipping functional outputs.")
         # Clean-up and output prep
         results.cleanup(gear_args)
     except Exception as e:
-        helper_funcs.report_failure(gear_args, e, "Functional QC")
+        helper_funcs.report_failure(gear_args, e, "Functional QC (func_main: L108)")
 
 
 def set_func_args_single_file(gear_args, specific_scan_name, scan_number_in_list):
