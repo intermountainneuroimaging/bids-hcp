@@ -151,7 +151,7 @@ RUN echo "bids-hcp" > /etc/hostname
 # Installing main dependencies
 ARG FLYWHEEL=/flywheel/v0
 COPY pyproject.toml poetry.lock $FLYWHEEL/
-RUN poetry install
+RUN poetry install --no-dev
 
 COPY scripts /tmp/scripts
 COPY scenes /tmp/scenes
