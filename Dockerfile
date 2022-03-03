@@ -143,7 +143,7 @@ ENV PATH="$POETRY_HOME/bin:$PATH"
 RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python
 
 # To address the "hostname: Temporary failure in name resolution"
-RUN echo "bids-hcp" > /etc/hostname
+RUN echo "bids-hcp" > /etc/hostname \
     echo "127.0.0.1 localhost" > /etc/hosts \
     echo "::1 localhost" >> /etc/hosts \
     echo "127.0.1.1 bids-hcp" >> /etc/hosts

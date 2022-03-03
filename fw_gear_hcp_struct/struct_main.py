@@ -203,7 +203,7 @@ def run_postFS(gear_args):
 
     # Run PostFreeSurferPipeline.sh from subprocess.run
     if rc == 0:
-        if "stats_only" in gear_args.structural:
+        if "stats_only" in gear_args.structural and gear_args.structural["stats_only"]:
             log.info("Skipping straight to compiling stats.")
         else:
             try:
