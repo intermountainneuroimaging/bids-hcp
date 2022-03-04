@@ -109,7 +109,7 @@ def execute(gear_args):
             environ=gear_args.environ,
             stdout_msg=stdout_msg,
         )
-        if 'error' in stderr.lower() or returncode != 0:
+        if "error" in stderr.lower() or returncode != 0:
             gear_args.common["errors"].append(
                 {"message": "FS failed. Check log", "exception": stderr}
             )

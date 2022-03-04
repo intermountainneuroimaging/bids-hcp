@@ -51,7 +51,7 @@ class GearArgs:
         self.structural = defaultdict()
         # Need a default 'fmri_name', as the value is not set for structural
         # or diffusion processing, but needed for QC processing
-        self.functional = {'fmri_name':None}
+        self.functional = {"fmri_name": None}
         self.diffusion = defaultdict()
         self.common = defaultdict()
         # Add the script path for each stage

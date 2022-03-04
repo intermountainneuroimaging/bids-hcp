@@ -188,9 +188,9 @@ def check_avgdcmethod(params):
             )
             params["avgrdcmethod"] = "NONE"
     # If there is not an echodiff and are no fmap images, then distortion correction should also be NONE
-    if (params["fmapmag"] == 'NONE' and params["fmapphase"] == 'NONE') or (
+    if (params["fmapmag"] == "NONE" and params["fmapphase"] == "NONE") or (
         params["avgrdcmethod"] == "GeneralElectricFieldMap"
-        and params["fmapgeneralelectric"] == 'NONE'
+        and params["fmapgeneralelectric"] == "NONE"
     ):
         log.warning(
             "avgrdcmethod was set to %s\nNo fmaps available. Setting to NONE.",
@@ -222,7 +222,7 @@ def execute(gear_args):
             environ=gear_args.environ,
             stdout_msg=stdout_msg,
         )
-        if 'error' in stderr.lower() or returncode != 0:
+        if "error" in stderr.lower() or returncode != 0:
             gear_args.common["errors"].append(
                 {"message": "PreFS failed. Check log", "exception": stderr}
             )

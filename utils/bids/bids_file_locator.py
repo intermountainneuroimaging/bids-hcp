@@ -60,9 +60,11 @@ class bidsInput:
                 os.rename(gear_args.common["gdcoeffs"], new_name)
                 gear_args.common["gdcoeffs"] = new_name
             if not gear_args.common["gdcoeffs"]:
-                log.error('Must have a gradient coefficient file from the manufacturer'
-                          'on the project.')
-                self.error_count +=1
+                log.error(
+                    "Must have a gradient coefficient file from the manufacturer"
+                    "on the project."
+                )
+                self.error_count += 1
 
         # Use pyBIDS finder method to capture the BIDS structure for these data
         self.layout = BIDSLayout(
@@ -100,14 +102,10 @@ class bidsInput:
                 extension=["nii.gz", "nii"],
             )
         ]
-        self.t1ws = [
-            scan
-            for scan in self.t1ws
-            if "MNINonLinear" not in scan
-        ]
-        assert len(self.t1ws) > 0, (
-            f"No T1w files found for subject {self.hierarchy['subject_label'].split('-')[-1]}!"
-        )
+        self.t1ws = [scan for scan in self.t1ws if "MNINonLinear" not in scan]
+        assert (
+            len(self.t1ws) > 0
+        ), f"No T1w files found for subject {self.hierarchy['subject_label'].split('-')[-1]}!"
         gear_args.structural["raw_t1s"] = self.t1ws
 
     def find_t2ws(self, gear_args):
@@ -120,11 +118,7 @@ class bidsInput:
                 extension=["nii.gz", "nii"],
             )
         ]
-        self.t2ws = [
-            scan
-            for scan in self.t2ws
-            if "MNINonLinear" not in scan
-        ]
+        self.t2ws = [scan for scan in self.t2ws if "MNINonLinear" not in scan]
         gear_args.structural["raw_t2s"] = self.t2ws
 
     def find_bolds(self, gear_args):

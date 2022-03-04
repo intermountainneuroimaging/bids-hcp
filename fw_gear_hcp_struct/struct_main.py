@@ -241,7 +241,8 @@ def run_struct_qc(gear_args):
 
         hcpstruct_qc_mosaic.set_params(gear_args)
         hcpstruct_qc_mosaic.execute(gear_args)
-        # Clean-up and output prep
-        results.cleanup(gear_args)
     except Exception as e:
         helper_funcs.report_failure(gear_args, e, "Structural QC")
+
+    # Clean-up and output prep
+    results.cleanup(gear_args)

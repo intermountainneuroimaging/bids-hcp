@@ -147,22 +147,27 @@ def execute(gear_args):
         stdout_msg=stdout_msg,
     )
 
+
 def validate_func_dcmethod(gear_args, params):
     """
     Mutual lock out function that will set the params to only have SiemendsFieldMap
     settings or only TOPUP settings. The aim to override studies with poorly or
     misspecified BIDS curation for fmaps.
     """
-    if (params["dcmethod"] == 'SiemensFieldMap') and (not params['biascorrection'].upper() == "SEBASED"):
-        if not params['fmapmag'] or not params['fmapphase']:
-            log.error(f'SiemensFieldMap was selected for Distortion correction, but Phase and or Mag fmaps are not specified.')
+    if (params["dcmethod"] == "SiemensFieldMap") and (
+        not params["biascorrection"].upper() == "SEBASED"
+    ):
+        if not params["fmapmag"] or not params["fmapphase"]:
+            log.error(
+                f"SiemensFieldMap was selected for Distortion correction, but Phase and or Mag fmaps are not specified."
+            )
         else:
-            log.info('Ensuring SiemensFieldMap-related fields are populated correctly.')
-            params['biascorrection'] = 'NONE'
-            params['SEPhasePos'] = 'NONE'
-            params['SEPhaseNeg'] = 'NONE'
+            log.info("Ensuring SiemensFieldMap-related fields are populated correctly.")
+            params["biascorrection"] = "NONE"
+            params["SEPhasePos"] = "NONE"
+            params["SEPhaseNeg"] = "NONE"
     elif params["dcmethod"].upper() == "TOPUP":
-        if not params['SEPhasePos'] or not params['SEPhaseNeg']:
+        if not params["SEPhasePos"] or not params["SEPhaseNeg"]:
             log.error(
                 "SE-Based BiasCorrection only available when "
                 + "providing Pos and Neg SpinEchoFieldMap scans"
@@ -175,16 +180,14 @@ def validate_func_dcmethod(gear_args, params):
                 {
                     "message": f"fMRIVol Distortion Correction for {params['fmritcs']}",
                     "exception": "SE-Based BiasCorrection only available when "
-                                 + "providing Pos and Neg SpinEchoFieldMap scans",
+                    + "providing Pos and Neg SpinEchoFieldMap scans",
                 }
             )
         else:
-            log.info(
-            f'Ensuring that TOPUP-related fields are populated properly.')
-            params['fmapmag'] = 'NONE'
-            params['fmapphase'] = 'NONE'
-            params['biascorrection'] = 'SEBASED'
-
+            log.info(f"Ensuring that TOPUP-related fields are populated properly.")
+            params["fmapmag"] = "NONE"
+            params["fmapphase"] = "NONE"
+            params["biascorrection"] = "SEBASED"
 
     # Ensure that Distortion correction has a configuration file.
     if (params["dcmethod"].upper() == "TOPUP") and not params["topupconfig"]:

@@ -188,7 +188,8 @@ def cleanup(gear_args: GearToolkitContext):
     # Move all images to output directory
     png_files = glob.glob(op.join(gear_args.dirs["bids_dir"], "*.png "))
     for fl in png_files:
-        shutil.copy(fl, gear_args.dirs["output_dir"] + "/")
+        dest = op.join(gear_args.dirs["output_dir"], op.basename(fl))
+        shutil.copy(fl, dest)
 
     save_config(
         gear_args.common["output_config"], gear_args.common["output_config_filename"]

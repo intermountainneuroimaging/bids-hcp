@@ -26,8 +26,10 @@ def main(gtk_context):
     bids_info.find_bids_files(gear_args)
 
     if bids_info.error_count > 0:
-        log.info('Please carefully check the error messages to correct '
-                 'your dataset before retrying the gear.')
+        log.info(
+            "Please carefully check the error messages to correct "
+            "your dataset before retrying the gear."
+        )
         sys.exit(1)
     else:
         e_code = 0
@@ -71,6 +73,7 @@ def main(gtk_context):
         sys.exit(1)
     else:
         sys.exit(0)
+
 
 if __name__ == "__main__":
     # TODO add Singularity capability
