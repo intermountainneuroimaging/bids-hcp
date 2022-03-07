@@ -244,9 +244,12 @@ class bidsInput:
             log.debug(
                 f'Number of positive ({len(gear_args.diffusion["pos_data"])}) and negative ({len(gear_args.diffusion["neg_data"])} DWI acquisitions match: {len(gear_args.diffusion["pos_data"]) == len(gear_args.diffusion["neg_data"])}'
             )
+            assert gear_args.diffusion["pos_data"]
+            assert gear_args.diffusion["neg_data"]
             assert len(gear_args.diffusion["pos_data"]) == len(
                 gear_args.diffusion["neg_data"]
             )
+
             assert len(gear_args.diffusion["pos_data"]) == num_of_directions
             gear_args.diffusion.update({"combine_data_flag": 1})
 
