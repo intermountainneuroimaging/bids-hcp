@@ -223,6 +223,8 @@ class bidsInput:
                 ]
                 # Not crazy - the diffusion directions are opposite. Neg is first.
                 neg, pos, _, echo_spacing = self.read_PE_dir(matching_files)
+                assert neg
+                assert pos
                 gear_args.diffusion["pos_data"].append(pos)
                 gear_args.diffusion["neg_data"].append(neg)
                 ################### From HCP example script
@@ -242,10 +244,8 @@ class bidsInput:
             assert gear_args.diffusion["PE_dir"]
             # Pairs of opposite polarities are needed for the algorithm. Check for matches here
             log.debug(
-                f'Number of positive ({len(gear_args.diffusion["pos_data"])}) and negative ({len(gear_args.diffusion["neg_data"])} DWI acquisitions match: {len(gear_args.diffusion["pos_data"]) == len(gear_args.diffusion["neg_data"])}'
+                f'Number of positive ({len(gear_args.diffusion["pos_data"])}) and negative ({len(gear_args.diffusion["neg_data"])}) DWI acquisitions match: {len(gear_args.diffusion["pos_data"]) == len(gear_args.diffusion["neg_data"])}'
             )
-            assert gear_args.diffusion["pos_data"]
-            assert gear_args.diffusion["neg_data"]
             assert len(gear_args.diffusion["pos_data"]) == len(
                 gear_args.diffusion["neg_data"]
             )
