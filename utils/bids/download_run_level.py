@@ -204,7 +204,7 @@ def download_bids_for_runlevel(
                 )
 
                 reqd_dirs = list_reqd_folders(folders)
-                folders, check_dirs = list_existing_dirs(folders, bids_dir)
+                folders, check_dirs = list_existing_dirs(bids_dir, folders)
 
                 if len(check_dirs) >= len(reqd_dirs):  # This happens during testing
                     bids_path = bids_dir
@@ -350,34 +350,33 @@ def download_bids_for_runlevel(
     return err_code
 
 
-def list_reqd_folders(folders):
+def list_reqd_folders(folders=["anat", "func", "dwi", "fmap"]):
     """
     Produce the complete list of folders that are required to be present
     for a BIDS analysis. This method is implemented specifically to avoid
     incomplete downloads.
     Args:
-        folders (list): the subset of folders to be ignored during the download
+        folders (list): the subset of folders to be included in the download
 
     Returns:
         final_set (list): the set of folders that must be downloaded to produce
         the analysis.
     """
     std_set = ["anat", "func", "dwi", "fmap"]
-    final_set = [x for x in std_set if x not in folders]
+    final_set = [x for x in std_set if x in folders]
     return final_set
 
 
-def list_existing_dirs(folders, bids_dir):
+def list_existing_dirs(bids_dir, folders=["anat", "func", "dwi", "fmap"]):
     """
     Find the existing folders in the BIDS working directory to insure that all
     associated files are downloaded, but extra re-downloading is avoided.
     Args:
-        folders (list): the subset of folders to be ignored during the download
         bids_dir (path): The BIDS working directory
+        folders (list): the subset of folders to be included in the download
 
     Returns:
-        folders (list): updated list to pass to download_bids_dir to exclude from
-                        download
+        folders (list): updated list to pass to download_bids_dir to limit re-download
         check_dirs (list): Any directories matching the required directory labels.
     """
 
