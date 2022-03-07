@@ -363,7 +363,11 @@ def list_reqd_folders(folders=["anat", "func", "dwi", "fmap"]):
         the analysis.
     """
     std_set = ["anat", "func", "dwi", "fmap"]
-    final_set = [x for x in std_set if x in folders]
+    if not folders:
+        final_set = std_set
+    else:
+        final_set = [x for x in std_set if x in folders]
+
     return final_set
 
 
