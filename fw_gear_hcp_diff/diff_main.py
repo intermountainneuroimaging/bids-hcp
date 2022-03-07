@@ -45,7 +45,7 @@ def run_diffusion(gear_args):
         DiffPreprocPipeline.set_params(gear_args)
     except Exception as e:
         rc = helper_funcs.report_failure(
-            gear_args, e, "Building params for diffusion", "fatal"
+            gear_args, e, "Building params for diffusion (run_diffusion)", "fatal"
         )
 
     # Reports some of the parameters that were just set.

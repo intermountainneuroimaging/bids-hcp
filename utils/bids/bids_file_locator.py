@@ -242,7 +242,7 @@ class bidsInput:
             assert gear_args.diffusion["PE_dir"]
             # Pairs of opposite polarities are needed for the algorithm. Check for matches here
             log.debug(
-                f'Number of positive and negative DWI acquisitions match: {len(gear_args.diffusion["pos_data"]) == len(gear_args.diffusion["neg_data"])}'
+                f'Number of positive ({len(gear_args.diffusion["pos_data"])}) and negative ({len(gear_args.diffusion["neg_data"])} DWI acquisitions match: {len(gear_args.diffusion["pos_data"]) == len(gear_args.diffusion["neg_data"])}'
             )
             assert len(gear_args.diffusion["pos_data"]) == len(
                 gear_args.diffusion["neg_data"]
