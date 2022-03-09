@@ -238,6 +238,9 @@ def test_runQc_throwsException(test_mod, test_fn, qc_mocks, mock_gear_args, capl
         test_mod
     )
     mock_mosaic.execute.side_effect = Exception()
+    mock_gear_args.common.update(
+        {"scan_type": "xray", "exclude_from_output": "why_would_you_do_that"}
+    )
     test_fn(mock_gear_args)
 
     mock_mosaic.set_params.assert_called_once()
