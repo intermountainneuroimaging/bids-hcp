@@ -1,7 +1,6 @@
 import logging
 import os
 import os.path as op
-import re
 import subprocess as sp
 import sys
 from glob import glob
@@ -53,18 +52,7 @@ class bidsInput:
             gear_args.common["hcpstruct_zip"] = self.gtk_context.get_input_path(
                 "hcpstruct_zip"
             )
-        if "gdcoeffs" in self.config["inputs"]:
-            gear_args.common["gdcoeffs"] = self.gtk_context.get_input_path("gdcoeffs")
-            if re.search(gear_args.common["gdcoeffs"], " +"):
-                new_name = "_".join(gear_args.common["gdcoeffs"].split(" "))
-                os.rename(gear_args.common["gdcoeffs"], new_name)
-                gear_args.common["gdcoeffs"] = new_name
-            if not gear_args.common["gdcoeffs"]:
-                log.error(
-                    "Must have a gradient coefficient file from the manufacturer"
-                    "on the project."
-                )
-                self.error_count += 1
+        gear_args.common["gdcoeffs"] = helper_funcs.set_gdcoeffs_file(self.gtk_context)
 
         # Use pyBIDS finder method to capture the BIDS structure for these data
         self.layout = BIDSLayout(

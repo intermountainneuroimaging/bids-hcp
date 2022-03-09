@@ -1,12 +1,15 @@
 import json
 import logging
+import os
 import os.path as op
+import re
 import subprocess as sp
 import sys
 from glob import glob
 
 import nibabel
 from bids.layout import BIDSLayout
+from flywheel_gear_toolkit import GearToolkitContext
 
 from utils import gear_arg_utils, results
 
@@ -280,8 +283,12 @@ def check_intended_for_fmaps(bids_layout, bids_dir, filepath):
         for jfile in jsons:
             with open(jfile, "r") as j:
                 jdata = json.loads(j.read())
-                if any(p in op.basename(filepath) for p in jdata["IntendedFor"]):
+                if any(p for p in jdata["IntendedFor"] if op.basename(filepath) in p):
+                    # The suffix helps indicate which DC method should be automatically chosen.
+                    # Locate the final entity of the BIDS name with the next command.
+                    # The final entity for fmaps will be "epi",'phasediff','magnitude?', 'phase?', or 'fieldmap'
                     jfile_suffix = jfile.split("_")[-1].split(".")[0]
+                    # Find the NIfTI that corresponds to the json
                     jfile = glob(op.splitext(jfile)[0] + ".nii*")[0]
                     try:
                         fieldmap_set[ix].update({jfile_suffix: jfile})
@@ -299,8 +306,40 @@ def check_intended_for_fmaps(bids_layout, bids_dir, filepath):
         # trigger the secondary check below and skip fieldmap processing later, if
         # there are legitimately no IntendedFors.
         log.info(
-            f"Using BIDSLayout method, as {filepath} did not return a match in the fmap jsons."
+            f"Using BIDSLayout method, BECAUSE {filepath} did not return a match in the fmap jsons."
         )
         # "BACKUP" method
         fieldmap_set = bids_layout.get_fieldmap(filepath, return_list=True)
     return fieldmap_set
+
+
+def set_gdcoeffs_file(gtk_context: GearToolkitContext):
+    """Gradient coefficients are required for the analysis. Find the specified file
+    or file set on the project level."""
+    fw = gtk_context.client
+    project_id = fw.get_analysis(gtk_context.destination.get("id")).parents.project
+    project = fw.get_project(project_id)
+    proj_file = [f for f in project.files if "coeff" in f.name][0]
+    if gtk_context.get_input_path("gdcoeffs"):
+        gdcoeffs = gtk_context.get_input_path("gdcoeffs")
+    # Look for file in project metadata
+    elif proj_file:
+        dest = op.join(gtk_context.work_dir, "coeff.grad")
+        project.download_file(proj_file.name, dest)
+        gdcoeffs = dest
+    else:
+        log.exception(
+            "Manufacturer gdcoeffs file is required for analysis.\n"
+            "Please contact your MR physicist or manufacturer for the file."
+        )
+    if re.search(gdcoeffs, " +"):
+        gdcoeffs = sanitize_gdcoeff_name(gdcoeffs)
+    return gdcoeffs
+
+
+def sanitize_gdcoeff_name(orig_gdcoeffs: os.PathLike):
+    """Remove any spaces from filename, so that the commandline is not disrupted."""
+    new_name = "_".join(orig_gdcoeffs.split(" "))
+    # Change the name in the available files
+    os.rename(orig_gdcoeffs, new_name)
+    return new_name
