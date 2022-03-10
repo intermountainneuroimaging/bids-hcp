@@ -121,11 +121,12 @@ def zip_pipeline_logs(
 
     # zip pipeline logs
     if {scan_type} == "func":
-        log_zipname = op.join(output_dir, f"{fmri_name}_{scan_type}_pipeline_logs.zip",)
+        log_zipname = op.join(output_dir, f"{fmri_name}_{scan_type}_pipeline_logs.zip")
     else:
-        log_zipname = op.join(output_dir, f"{scan_type}_pipeline_logs.zip",)
+        log_zipname = op.join(output_dir, f"{scan_type}_pipeline_logs.zip")
     log.info("Zipping pipeline logs to %s", log_zipname)
 
+    # Remove pre-existing log zips with the same name
     try:
         os.remove(log_zipname)
     except Exception as e:
