@@ -1,6 +1,6 @@
 {
   "author": "Human Connectome Project",
-  "cite": "Glasser M. F., Sotiropoulos S. N., Wilson J. A., Coalson T. S., Fischl B., Andersson J. L., … Consortium, W. U.-M. H. (2013). The minimal preprocessing pipelines for the Human Connectome Project. NeuroImage, 80, 105–124.",
+  "cite": "Glasser M. F., Sotiropoulos S. N., Wilson J. A., Coalson T. S., Fischl B., Andersson J. L., \u2026 Consortium, W. U.-M. H. (2013). The minimal preprocessing pipelines for the Human Connectome Project. NeuroImage, 80, 105\u2013124.",
   "command": "/flywheel/v0/run.py",
   "config": {
     "aseg_csv": {
@@ -152,6 +152,11 @@
         "z",
         "z-"
       ],
+      "type": "string"
+    },
+    "writable_dir": {
+      "default": "/var/tmp",
+      "description": "Gears expect to be able to write temporary files in /flywheel/v0/.  If this location is not writable (such as when running in Singularity), this path will be used instead.  fMRIPrep creates a large number of files so this disk space should be fast and local.",
       "type": "string"
     }
   },

@@ -25,10 +25,51 @@ def check_for_singularity():
 
 
 def start_singularity(gear_name: str, writable_dir: os.PathLike, debug: bool):
+    """
+    Set up the environment for a clean Singularity run.
+    Args:
+        writable_dir (string): directory to use for temporary files if /flywheel/v0 is not
+            writable.
+    """
     if debug:
         log_singularity_details()
-    remove_previous_runs(gear_name)
+
+    # Favor containing the gear in normal gear locations
+    use_wrtbl_dir = check_writable_dirs(FWV0)
+    if not use_wrtbl_dir:
+        use_wrtbl_dir = check_writable_dirs(writable_dir)
+    writable_dir = use_wrtbl_dir
+    # Use the writable directory to set up the rest of the env
+    remove_previous_runs(gear_name, writable_dir)
     mount_gear_home_to_tmp(gear_name, writable_dir)
+    return writable_dir
+
+
+def check_writable_dirs(writable_dir: os.PathLike):
+    locs = glob("/flywheel/v0/*")
+    prmsns = []
+    for loc in locs:
+        prmsns.append(os.access(loc, os.W_OK))
+    if all(prmsns):
+        return writable_dir
+    else:
+        log.info(f"{writable_dir} is not writable in this environment.")
+        return none
+
+
+def log_singularity_details():
+    """Help debug Singularity settings, including permissions and UID."""
+    log.info(f"SINGULARITY_NAME is {os.environ['SINGULARITY_NAME']}")
+    log.debug(f"UID is {os.getuid()}")
+    log.debug("Permissions: 4=read, 2=write, 1=read")
+    alt_locs = glob("/home/bidsapp")
+    for loc in alt_locs:
+        for prmsn in [os.R_OK, os.W_OK, os.X_OK]:
+            log.debug(f"Permission {prmsn} for {loc}: {os.access(loc,prmsn)}")
+        if ("gear_environ" in loc) and not os.access(loc, os.R_OK):
+            log.error(
+                "Cannot read gear_environ.json. Gear will download BIDS in the wrong spot and will not wrap up properly."
+            )
 
 
 def mount_gear_home_to_tmp(gear_name, writable_dir):
@@ -58,24 +99,9 @@ def mount_gear_home_to_tmp(gear_name, writable_dir):
     return new_FWV0
 
 
-def log_singularity_details():
-    """Help debug Singularity settings, including permissions and UID."""
-    log.info(f"SINGULARITY_NAME is {os.environ['SINGULARITY_NAME']}")
-    log.debug(f"UID is {os.getuid()}")
-    log.debug("Permissions: 4=read, 2=write, 1=read")
-    locs = glob("/tmp/*") + glob("/flywheel/v0/*") + glob("/home/bidsapp")
-    for loc in locs:
-        for prmsn in [os.R_OK, os.W_OK, os.X_OK]:
-            log.debug(f"Permission {prmsn} for {loc}: {os.access(loc,prmsn)}")
-        if ("gear_environ" in loc) and not os.access(loc, os.R_OK):
-            log.error(
-                "Cannot read gear_environ.json. Gear will download BIDS in the wrong spot and will not wrap up properly."
-            )
-
-
-def remove_previous_runs(gear_name):
+def remove_previous_runs(gear_name, writable_dir="/var/tmp"):
     """remove any previous runs (possibly left over from previous testing)"""
-    previous_runs = glob(os.path.join("/tmp", gear_temp_dir + gear_name + "*"))
+    previous_runs = glob(os.path.join(writable_dir, gear_temp_dir + gear_name + "*"))
     if previous_runs:
         log.debug("previous_runs = %s", previous_runs)
         for prev in previous_runs:

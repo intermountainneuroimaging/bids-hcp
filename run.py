@@ -93,11 +93,12 @@ if __name__ == "__main__":
                     "HPC usage requires that a writable directory be specified in the configuration tab.\n"
                     "Please add the path to the writable directory and try again."
                 )
-            singularity.start_singularity(
+            updated_wrtbl_dir = singularity.start_singularity(
                 "bids-hcp",
                 gear_context.config["writable_dir"],
                 gear_context.config["debug"],
             )
+            gear_context.config["writable_dir"] = updated_wrtbl_dir
 
         # Copy the key to the proper location in Docker for all analyses.
         environment.set_freesurfer_license(gear_context)
