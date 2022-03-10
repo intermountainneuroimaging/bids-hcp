@@ -8,14 +8,14 @@ from flywheel_gear_toolkit import GearToolkitContext
 from fw_gear_hcp_diff import diff_main
 from fw_gear_hcp_func import func_main
 from fw_gear_hcp_struct import struct_main
-from utils import environment, gear_arg_utils, helper_funcs
+from utils import environment, gear_arg_utils, helper_funcs, singularity
 from utils.bids import bids_file_locator
 from utils.set_gear_args import GearArgs
 
 log = logging.getLogger(__name__)
 
 
-def main(gtk_context):
+def main(gtk_context, use_singularity):
     # Set up the templates, config options from the config_json, and other essentials
     log.info("Populating gear arguments")
     gear_args = GearArgs(gtk_context)
@@ -68,6 +68,9 @@ def main(gtk_context):
             for arg in [x.lower() for x in gear_args.common["stages"].split(" ")]
         ) and (e_code == 0):
             e_code += diff_main.run(gear_args)
+    # Clean up the space, even/especially if there were errors.
+    if use_singularity:
+        singularity.unlink_gear_mounts("bids-hcp")
 
     if e_code >= 1:
         sys.exit(1)
@@ -76,15 +79,27 @@ def main(gtk_context):
 
 
 if __name__ == "__main__":
-    # TODO add Singularity capability
-    # Singularity help https://singularityhub.github.io/singularity-hpc/r/bids-hcppipelines/
-
+    # Decide which env is available
+    use_singularity = singularity.check_for_singularity()
+    # To test within a Singularity container, use "(config_path='/flywheel/v0/config.json')" for context.
     # Get access to gear config, inputs, and sdk client if enabled.
-    with GearToolkitContext() as gtk_context:
+    with GearToolkitContext() as gear_context:
         # Initialize logging, set logging level based on `debug` configuration
         # key in gear config.
-        gtk_context.init_logging()
+        gear_context.init_logging()
+        if use_singularity:
+            if not gear_context.config["writable_dir"]:
+                log.critical(
+                    "HPC usage requires that a writable directory be specified in the configuration tab.\n"
+                    "Please add the path to the writable directory and try again."
+                )
+            singularity.start_singularity(
+                "bids-hcp",
+                gear_context.config["writable_dir"],
+                gear_context.config["debug"],
+            )
+
         # Copy the key to the proper location in Docker for all analyses.
-        environment.set_freesurfer_license(gtk_context)
+        environment.set_freesurfer_license(gear_context)
         # Pass the gear context into main function defined above.
-        main(gtk_context)
+        main(gear_context, use_singularity)
