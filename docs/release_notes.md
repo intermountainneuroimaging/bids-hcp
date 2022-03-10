@@ -1,3 +1,16 @@
+##0.2.4_4.3.0_rc1
+### Enhancements
+- More robust file handling, particularly around Distortion Correction methods
+- Handles SE-based fmaps with TOPUP (with warning to check validity of the approach)
+
+### Documentation
+- More comments to clarify how HCP handles inputs; logic checks
+
+### Known issues
+- Structural QC cannot find StrainR/L in the workbench scene provided to the gear
+- Functional QC cannot construct a couple of snapshots, also based on missing files.
+Note: neither had occurred in previous versions, so perhaps something changed in the base image.
+
 ##0.2.0_4.3.0
 ### Fixes
 - SSL cert upgraded
