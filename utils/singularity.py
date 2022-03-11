@@ -38,15 +38,18 @@ def start_singularity(gear_name: str, writable_dir: os.PathLike, debug: bool):
     use_wrtbl_dir = check_writable_dirs(FWV0)
     if not use_wrtbl_dir:
         use_wrtbl_dir = check_writable_dirs(writable_dir)
-    writable_dir = use_wrtbl_dir
     # Use the writable directory to set up the rest of the env
+    writable_dir = use_wrtbl_dir
     remove_previous_runs(gear_name, writable_dir)
     mount_gear_home_to_tmp(gear_name, writable_dir)
     return writable_dir
 
 
 def check_writable_dirs(writable_dir: os.PathLike):
-    locs = glob("/flywheel/v0/*")
+    """
+    The returned value indicates if the input directory is writable within the environment.
+    """
+    locs = glob(os.path.join(writable_dir, "*"))
     prmsns = []
     for loc in locs:
         prmsns.append(os.access(loc, os.W_OK))
@@ -54,7 +57,7 @@ def check_writable_dirs(writable_dir: os.PathLike):
         return writable_dir
     else:
         log.info(f"{writable_dir} is not writable in this environment.")
-        return none
+        return None
 
 
 def log_singularity_details():
@@ -62,6 +65,8 @@ def log_singularity_details():
     log.info(f"SINGULARITY_NAME is {os.environ['SINGULARITY_NAME']}")
     log.debug(f"UID is {os.getuid()}")
     log.debug("Permissions: 4=read, 2=write, 1=read")
+    # Alt_locs may be needed, b/c they are atlases or pipeline files required
+    # by the app/gear
     alt_locs = glob("/home/bidsapp")
     for loc in alt_locs:
         for prmsn in [os.R_OK, os.W_OK, os.X_OK]:
