@@ -127,6 +127,7 @@ def zip_pipeline_logs(
     log.info("Zipping pipeline logs to %s", log_zipname)
 
     # Remove pre-existing log zips with the same name
+    # This can happen mid-func run, I believe
     try:
         os.remove(log_zipname)
     except Exception as e:
@@ -231,9 +232,8 @@ def create_error_log(errors):
     """Create a log message summarizing the errors and a log of all the arguments used in the
     analysis.
     Args:
-         gear_args: The gear context object
-         containing the 'gear_dict' dictionary attribute with keys/values
-         utilized in the called helper functions.
+         errors (dict): contains keys/values from gear_context.common
+         that store validation and/or error problems.
     """
     if len(errors) > 0:
         log.info(

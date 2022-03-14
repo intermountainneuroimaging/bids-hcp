@@ -5,7 +5,24 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from utils.helper_funcs import check_fmap_types, sanitize_gdcoeff_name
+import utils.helper_funcs
+from utils.helper_funcs import (
+    check_fmap_types,
+    check_intended_for_fmaps,
+    sanitize_gdcoeff_name,
+    set_gdcoeffs_file,
+)
+
+
+# Add parametrize for jload_vals
+@patch("utils.helper_funcs.json.loads")
+@patch("utils.helper_funcs.glob", return_value=["fmap1", "fmap2"])
+def test_check_intended_for_fmaps(mock_glob, mock_jload):
+    pass
+
+
+# stub    mock_jload.return_value = jload_vals
+# stub    check_intended_for_fmaps(mock_bids, '/a/random/dir', 'my_kind_of_scan')
 
 
 @pytest.mark.parametrize(

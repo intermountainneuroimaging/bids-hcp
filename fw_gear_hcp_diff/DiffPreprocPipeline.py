@@ -94,7 +94,7 @@ def execute(gear_args):
 
     stdout_msg = (
         "Pipeline logs (stdout, stderr) will be available "
-        + 'in the file "pipeline_logs.zip" upon completion.'
+        + 'in the file {gear_args.common["output_zip_name"]} upon completion.'
     )
     if gear_args.fw_specific["gear_dry_run"]:
         log.info(f"DiffusionProcessing command:\n")

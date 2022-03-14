@@ -136,7 +136,7 @@ def execute(gear_args):
 
     stdout_msg = (
         "Pipeline logs (stdout, stderr) will be available "
-        + 'in the file "pipeline_logs.zip" upon completion.'
+        + 'in the file "func_pipeline_logs.zip" upon completion.'
     )
     if gear_args.fw_specific["gear_dry_run"]:
         log.info("GenericfMRIVolumeProcessingPipeline command: \n")

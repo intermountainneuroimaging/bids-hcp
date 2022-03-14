@@ -24,11 +24,7 @@ def run(gear_args):
 
     rc = run_diffusion(gear_args)
 
-    if (
-        (not gear_args.common["errors"])
-        and (not gear_args.fw_specific["gear_dry_run"])
-        and (rc == 0)
-    ):
+    if rc == 0:
         run_diff_qc(gear_args)
 
     return 0
@@ -77,7 +73,7 @@ def run_diff_qc(gear_args):
     Returns:
         png files: subject-derived results are overlaid on template images.
     """
-    if gear_args.fw_specific["gear_dry_run"] is False:
+    if not gear_args.fw_specific["gear_dry_run"]:
         try:
             hcpdiff_qc_mosaic.set_params(gear_args)
             hcpdiff_qc_mosaic.execute(gear_args)
