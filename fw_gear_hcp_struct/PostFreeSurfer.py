@@ -73,9 +73,22 @@ def execute(gear_args):
 
     if gear_args.fw_specific["gear_dry_run"]:
         log.info("PostFreeSurfer command:\n{command}")
-    exec_command(
-        command,
-        dry_run=gear_args.fw_specific["gear_dry_run"],
-        environ=gear_args.environ,
-        stdout_msg=stdout_msg,
-    )
+    try:
+        stdout, stderr, returncode = exec_command(
+            command,
+            dry_run=gear_args.fw_specific["gear_dry_run"],
+            environ=gear_args.environ,
+            stdout_msg=stdout_msg,
+        )
+        if "error" in stderr.lower() or returncode != 0:
+            gear_args.common["errors"].append(
+                {"message": "PostFS failed. Check log", "exception": stderr}
+            )
+    except Exception as e:
+        if gear_args.fw_specific["gear_dry_run"]:
+            # Error thrown due to non-iterable stdout, stderr, returncode
+            pass
+        else:
+            gear_args.common["errors"].append(
+                {"message": "PostFS failed.", "exception": e}
+            )

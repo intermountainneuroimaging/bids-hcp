@@ -49,7 +49,9 @@ class GearArgs:
             "scenes_dir": "/tmp/scenes",
         }
         self.structural = defaultdict()
-        self.functional = defaultdict()
+        # Need a default 'fmri_name', as the value is not set for structural
+        # or diffusion processing, but needed for QC processing
+        self.functional = {"fmri_name": None}
         self.diffusion = defaultdict()
         self.common = defaultdict()
         # Add the script path for each stage
@@ -78,6 +80,7 @@ class GearArgs:
             {
                 "subject": gear_arg_utils.set_subject(gtk_context),
                 "current_stage": self.common["stages"].split()[0],
+                "exclude_from_output": None,
                 "errors": [],
                 "safe_list": [],
             }

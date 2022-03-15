@@ -9,9 +9,11 @@ import os
 import os.path as op
 import shutil
 import subprocess as sp
+import typing as t
 from zipfile import ZIP_DEFLATED, ZipFile
 
 import jsonpickle
+from flywheel_gear_toolkit import GearToolkitContext
 
 log = logging.getLogger(__name__)
 
@@ -19,26 +21,24 @@ log = logging.getLogger(__name__)
 # # Clean-up and prepare outputs
 
 
-def save_config(gear_args):
+def save_config(config, config_filename):
     """
     save_config uses the 'output_config' and 'output_config_filename' encapsulated in
     gear_args.common to save selected values from the analysis configuration to the working
     directory of the gear (/flywheel/v0/work).
 
     Args:
-        gear_args: Must contain each of the following attributes with keys/values.
+        gear_args (GearToolkitContext): context with extra fields; must contain each of the following attributes with keys/values.
         (Set by "configs_to_export" in each "*_utils.py".)
             'output_config': A configuration dictionary created for downstream
                 gears in the HCP pipeline
             'output_config_filename': The absolute filepath to use for the above
     """
-    config = gear_args.common["output_config"]
-    config_filename = gear_args.common["output_config_filename"]
     with open(config_filename, "w") as f:
         json.dump(config, f, indent=4)
 
 
-def preserve_safe_list_files(gear_args):
+def preserve_safe_list_files(safe_list, output_dir, dry_run=False):
     """
     preserve_safe_list_files copies the files listed in the 'safe_list' gear_args.common key
     directly to the output directory.  These files are to be presented directly to
@@ -52,13 +52,15 @@ def preserve_safe_list_files(gear_args):
             this under a 'dry-run' scenario
     """
 
-    if not gear_args.fw_specific["gear_dry_run"]:
-        for fl in gear_args.common["safe_list"]:
+    if not dry_run:
+        for fl in safe_list:
             log.info("Copying file to output: %s", fl)
-            shutil.copy(fl, gear_args.dirs["output_dir"])
+            shutil.copy(fl, output_dir)
 
 
-def zip_output(gear_args):
+def zip_output(
+    scan_type, subject, output_dir, bids_dir, exclusions, fmri_name=None, dry_run=False
+):
     """
     zip_output Compresses the complete output of the gear
     (in /flywheel/v0/workdir/<Subject>)
@@ -73,32 +75,28 @@ def zip_output(gear_args):
             'exclude_from_output': files to exclude from the output
             (e.g. hcp-struct files)
     """
-    if {gear_args.common["scan_type"]} == "func":
+    if {scan_type} == "func":
         output_zipname = op.join(
-            gear_args.dirs["output_dir"],
-            f"{gear_args.common['subject']}_{gear_args.functional['fmri_name']}_hcp{gear_args.common['scan_type']}.zip",
+            output_dir, f"{subject}_{fmri_name}_hcp{scan_type}.zip",
         )
     else:
-        output_zipname = op.join(
-            gear_args.dirs["output_dir"],
-            f"{gear_args.common['subject']}_hcp{gear_args.common['scan_type']}.zip",
-        )
+        output_zipname = op.join(output_dir, f"{subject}_hcp{scan_type}.zip",)
 
-    if "exclude_from_output" in gear_args.common.keys():
-        exclude_from_output = gear_args.common["exclude_from_output"]
+    if exclusions:
+        exclude_from_output = exclusions
     else:
         exclude_from_output = []
 
     log.info("Zipping output file %s", output_zipname)
-    if not gear_args.fw_specific["gear_dry_run"]:
+    if not dry_run:
         try:
             os.remove(output_zipname)
         except Exception as e:
             pass
 
-        os.chdir(gear_args.dirs["bids_dir"])
+        os.chdir(bids_dir)
         outzip = ZipFile(output_zipname, "w", ZIP_DEFLATED)
-        for root, _, files in os.walk(gear_args.common["subject"]):
+        for root, _, files in os.walk(subject):
             for fl in files:
                 fl_path = op.join(root, fl)
                 # only if the file is not to be excluded from output
@@ -107,36 +105,34 @@ def zip_output(gear_args):
         outzip.close()
 
 
-def zip_pipeline_logs(gear_args):
+def zip_pipeline_logs(
+    scan_type: str,
+    output_dir: os.PathLike,
+    bids_dir: os.PathLike,
+    fmri_name: str = None,
+):
     """
     zip_pipeline_logs Compresses files in
     '/flywheel/v0/work/bids/logs' to '/flywheel/v0/output/pipeline_logs.zip'
 
     Args:
-        gear_args: A gear context object
-            leveraged for the location of the "working" and "output"
-            directories of the log files.
+        scan_type
     """
 
     # zip pipeline logs
-    if {gear_args.common["scan_type"]} == "func":
-        log_zipname = op.join(
-            gear_args.dirs["output_dir"],
-            f"{gear_args.common['fmri_name']}_{gear_args.common['scan_type']}_pipeline_logs.zip",
-        )
+    if {scan_type} == "func":
+        log_zipname = op.join(output_dir, f"{fmri_name}_{scan_type}_pipeline_logs.zip")
     else:
-        log_zipname = op.join(
-            gear_args.dirs["output_dir"],
-            f"{gear_args.common['scan_type']}_pipeline_logs.zip",
-        )
+        log_zipname = op.join(output_dir, f"{scan_type}_pipeline_logs.zip")
     log.info("Zipping pipeline logs to %s", log_zipname)
 
+    # Remove pre-existing log zips with the same name
     try:
         os.remove(log_zipname)
     except Exception as e:
         pass
 
-    os.chdir(gear_args.dirs["bids_dir"])
+    os.chdir(bids_dir)
     logzipfile = ZipFile(log_zipname, "w", ZIP_DEFLATED)
     for root, _, files in os.walk("logs"):
         log.debug(f"Found logs in {root}")
@@ -144,7 +140,7 @@ def zip_pipeline_logs(gear_args):
             logzipfile.write(os.path.join(root, fl))
 
 
-def export_metadata(gear_args):
+def export_metadata(gear_args: GearToolkitContext):
     """
     If metadata exists (in gear_dict) for this gear write to the
     application. The flywheel sdk is used to write the metadata to the
@@ -180,10 +176,9 @@ def export_metadata(gear_args):
         log.info("No data available to save in .metadata.json.")
 
 
-def cleanup(gear_args):
+def cleanup(gear_args: GearToolkitContext):
     """
-    cleanup is used to complete all of the functions in 'results' and offer a simple
-    interface for the main script to do so.
+    Execute a series of steps to store outputs on the proper containers.
 
     Args:
         gear_args: The gear context object
@@ -194,14 +189,34 @@ def cleanup(gear_args):
     # Move all images to output directory
     png_files = glob.glob(op.join(gear_args.dirs["bids_dir"], "*.png "))
     for fl in png_files:
-        shutil.copy(fl, gear_args.dirs["output_dir"] + "/")
+        dest = op.join(gear_args.dirs["output_dir"], op.basename(fl))
+        shutil.copy(fl, dest)
 
-    save_config(gear_args)
-    zip_output(gear_args)
-    zip_pipeline_logs(gear_args)
-    preserve_safe_list_files(gear_args)
+    save_config(
+        gear_args.common["output_config"], gear_args.common["output_config_filename"]
+    )
+    zip_output(
+        gear_args.common["scan_type"],
+        gear_args.common["subject"],
+        gear_args.dirs["output_dir"],
+        gear_args.dirs["bids_dir"],
+        gear_args.common["exclude_from_output"],
+        gear_args.functional["fmri_name"],
+        gear_args.fw_specific["gear_dry_run"],
+    )
+    zip_pipeline_logs(
+        gear_args.common["scan_type"],
+        gear_args.dirs["output_dir"],
+        gear_args.dirs["bids_dir"],
+        gear_args.functional["fmri_name"],
+    )
+    preserve_safe_list_files(
+        gear_args.common["safe_list"],
+        gear_args.dirs["output_dir"],
+        gear_args.fw_specific["gear_dry_run"],
+    )
     export_metadata(gear_args)
-    create_error_log(gear_args)
+    create_error_log(gear_args.common["errors"])
     # List final directory to log
     log.info("Final output directory listing: gear_args.dirs['output_dir']")
     os.chdir(gear_args.dirs["output_dir"])
@@ -212,7 +227,7 @@ def cleanup(gear_args):
     log.info("\n %s", stdout)
 
 
-def create_error_log(gear_args):
+def create_error_log(errors):
     """Create a log message summarizing the errors and a log of all the arguments used in the
     analysis.
     Args:
@@ -220,17 +235,9 @@ def create_error_log(gear_args):
          containing the 'gear_dict' dictionary attribute with keys/values
          utilized in the called helper functions.
     """
-    if len(gear_args.common["errors"]) > 0:
+    if len(errors) > 0:
         log.info(
-            f"Encountered {len(gear_args.common['errors'])} error(s) during set_params routines. Please check the logs and correct the issues before re-running."
+            f"Encountered {len(errors)} error(s) during set_params routines. Please check the logs and correct the issues before re-running."
         )
-    if gear_args.common["errors"]:
-        log.debug(f'Errors were:\n{gear_args.common["errors"]}')
-
-    # log.info(
-    #     "Logging gear_args as output. Please consult logs particularly to make\n"
-    #     "sure that all necessary files were located and placed in the \n"
-    #     "appropriate modality configurations."
-    # )
-    # with open(op.join(gear_args.dirs["output_dir"], "gear_arg.json"), "w") as fp:
-    #     jsonpickle.encode(gear_args)
+    if errors:
+        log.debug(f"Errors were:\n{errors}")

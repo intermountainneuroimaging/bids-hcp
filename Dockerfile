@@ -18,7 +18,7 @@ RUN apt-get update && \
     nodejs \
     tree && \
     rm -rf /var/lib/apt/lists/* && \
-    npm install -g bids-validator@1.5.7
+    npm install -g bids-validator@1.9.0
 
 
 #############################################
@@ -142,8 +142,14 @@ ENV PATH="$POETRY_HOME/bin:$PATH"
 # get-poetry respects ENV
 RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python
 
+# To address the "hostname: Temporary failure in name resolution"
+RUN echo "bids-hcp" > /etc/hostname \
+    echo "127.0.0.1 localhost" > /etc/hosts \
+    echo "::1 localhost" >> /etc/hosts \
+    echo "127.0.1.1 bids-hcp" >> /etc/hosts
 
 # Installing main dependencies
+ARG FLYWHEEL=/flywheel/v0
 COPY pyproject.toml poetry.lock $FLYWHEEL/
 RUN poetry install --no-dev
 

@@ -14,7 +14,7 @@ from fw_gear_hcp_struct import (
     hcpstruct_qc_scenes,
     struct_utils,
 )
-from utils import gear_arg_utils, results, helper_funcs
+from utils import gear_arg_utils, helper_funcs, results
 
 log = logging.getLogger(__name__)
 
@@ -29,7 +29,7 @@ def run(gear_args):
     Returns:
         rc (int): return code
     """
-    gear_args.common['scan_type'] = 'struct'
+    gear_args.common["scan_type"] = "struct"
     rc = 0
     check_FS_install(gear_args)
 
@@ -119,7 +119,7 @@ def run_preFS(gear_args):
         )
     ###########################################################################
 
-    if not gear_args.common["errors"]:
+    if rc == 0:
         # Run PreFreeSurferPipeline.sh from subprocess.run
         try:
             log.debug("Executing PreFreeSurfer command.")
@@ -156,7 +156,7 @@ def run_FS(gear_args):
             gear_args, e, "Build params for FreeSurfer", "fatal"
         )
 
-    if not gear_args.common["errors"]:
+    if rc == 0:
         # Run FreeSurferPipeline.sh from subprocess.run
         try:
             FreeSurfer.execute(gear_args)
@@ -202,8 +202,8 @@ def run_postFS(gear_args):
         )
 
     # Run PostFreeSurferPipeline.sh from subprocess.run
-    if not gear_args.common["errors"]:
-        if gear_args.structural["stats_only"]:
+    if rc == 0:
+        if "stats_only" in gear_args.structural and gear_args.structural["stats_only"]:
             log.info("Skipping straight to compiling stats.")
         else:
             try:
@@ -241,7 +241,8 @@ def run_struct_qc(gear_args):
 
         hcpstruct_qc_mosaic.set_params(gear_args)
         hcpstruct_qc_mosaic.execute(gear_args)
-        # Clean-up and output prep
-        results.cleanup(gear_args)
     except Exception as e:
         helper_funcs.report_failure(gear_args, e, "Structural QC")
+
+    # Clean-up and output prep
+    results.cleanup(gear_args)

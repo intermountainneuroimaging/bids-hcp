@@ -25,13 +25,20 @@ def main(gtk_context):
     bids_info = bids_file_locator.bidsInput(gtk_context)
     bids_info.find_bids_files(gear_args)
 
-    e_code = 0
+    if bids_info.error_count > 0:
+        log.info(
+            "Please carefully check the error messages to correct "
+            "your dataset before retrying the gear."
+        )
+        sys.exit(1)
+    else:
+        e_code = 0
     # Structural analysis
     if any("surfer" in arg.lower() for arg in [gear_args.common["stages"]]):
         if not gear_args.structural["avgrdcmethod"] == "NONE":
             # Add distortion correction information
             gear_args.structural.update(
-                helper_funcs.dcmethods(gear_args, bids_info.layout, "structural")
+                helper_funcs.set_dcmethods(gear_args, bids_info.layout, "structural")
             )
         e_code += struct_main.run(gear_args)
     elif not gear_args.fw_specific["gear_dry_run"]:
@@ -53,7 +60,7 @@ def main(gtk_context):
         if any("fmri" in arg.lower() for arg in [gear_args.common["stages"]]) and (
             e_code == 0
         ):
-            e_code += func_main.run(gear_args, bids_info)
+            e_code += func_main.run(gear_args, bids_info.layout)
 
         # Diffusion analysis
         if any(
@@ -66,6 +73,7 @@ def main(gtk_context):
         sys.exit(1)
     else:
         sys.exit(0)
+
 
 if __name__ == "__main__":
     # TODO add Singularity capability
