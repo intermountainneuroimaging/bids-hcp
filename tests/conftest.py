@@ -120,6 +120,7 @@ def common_mocks(mocker):
             )
         except ModuleNotFoundError:
             mock_results = "dummy"
+
         try:
             mock_zip = mocker.patch(
                 "fw_gear_hcp_" + modality + "." + modality + "_main.ZipFile"
@@ -176,7 +177,13 @@ def qc_mocks(mocker):
             + modality
             + "_qc_mosaic"
         )
-        return mock_results, mock_exit, mock_scene, mock_mosaic
+        try:
+            mock_results_zip = mocker.patch(
+                "fw_gear_hcp_" + modality + "." + modality + "_main.results.zip_output"
+            )
+        except ModuleNotFoundError:
+            mock_results_zip = "dummy"
+        return mock_results, mock_exit, mock_scene, mock_mosaic, mock_results_zip
 
     return mock
 
@@ -244,11 +251,7 @@ def mock_gtk_context(mocker):
                     "name": "001_hcpstruct.zip",
                     "path": "/flywheel/v0/input/hcpstruct_zip/001_hcpstruct.zip",
                 },
-                "object": {
-                    "info": {},
-                    "tags": [],
-                    "measurements": [],
-                },
+                "object": {"info": {}, "tags": [], "measurements": [],},
             },
         },
         work_dir={"test/data"},

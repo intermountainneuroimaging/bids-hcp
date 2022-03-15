@@ -24,11 +24,7 @@ def test_get_and_log_env_returns_values():
 
 @pytest.mark.parametrize(
     "config_val, outcome",
-    [
-        ("", 1),
-        ("FREESURFER_LICENSE", 1),
-        ("FreeSurferLicense", 2),
-    ],
+    [("", 1), ("FREESURFER_LICENSE", 1), ("FreeSurferLicense", 2),],
 )
 def test_set_FS_license(config_val, outcome, mock_gtk_context, caplog):
     """Test whether the FreeSurfer license can be identified."""

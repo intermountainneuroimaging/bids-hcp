@@ -4,6 +4,7 @@ set -e
 
 SCRIPT_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 
+# Main script that will accept substitutions below.
 qcmosaic1() { 
   bash ${SCRIPT_DIR}/volmosaic.sh $1 x 10 ${2}.png 
 }
@@ -16,6 +17,7 @@ T1wTemplate=$2
 imgroot=$3
 
 #set -x
+# Set and run the substitutions.
 qcmosaic1 ${subject_dir}/T1w/T1w_acpc_dc ${imgroot}acpc_T1 # T1 acpc
 qcmosaic1 ${subject_dir}/T1w/T2w_acpc_dc ${imgroot}acpc_T2 # T2 acpc
 

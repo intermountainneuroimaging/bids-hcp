@@ -30,12 +30,7 @@ def test_sort_gear_args(caplog):
     "mock_effect, mock_cc, mock_msg", [(Exception, 0, "Invalid"), ("", 1, "")]
 )
 def test_make_hcp_zip_available(
-    mock_effect,
-    mock_cc,
-    mock_msg,
-    mock_gear_args,
-    common_gear_arg_mocks,
-    caplog,
+    mock_effect, mock_cc, mock_msg, mock_gear_args, common_gear_arg_mocks, caplog,
 ):
     """
     The first step in the functional method requires that the output of the structural

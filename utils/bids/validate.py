@@ -40,6 +40,7 @@ import json
 import logging
 import pprint
 import subprocess as sp
+from pathlib import Path
 
 log = logging.getLogger(__name__)
 
@@ -163,6 +164,8 @@ def validate_bids(bids_path):
     """
 
     num_bids_errors = -1  # impossible value
+    if isinstance(bids_path, str):
+        bids_path = Path(bids_path)
 
     out_path = bids_path / ".." / "validator.output.json"
 

@@ -17,7 +17,7 @@ def run(gear_args):
     Returns:
         rc (int): return code
     """
-    gear_args.common['scan_type'] = 'diff'
+    gear_args.common["scan_type"] = "diff"
     rc = 0
     # Get file list and configuration from hcp-struct zipfile
     helper_funcs.run_struct_zip_setup(gear_args)
@@ -45,7 +45,7 @@ def run_diffusion(gear_args):
         DiffPreprocPipeline.set_params(gear_args)
     except Exception as e:
         rc = helper_funcs.report_failure(
-            gear_args, e, "Building params for diffusion", "fatal"
+            gear_args, e, "Building params for diffusion (run_diffusion)", "fatal"
         )
 
     # Reports some of the parameters that were just set.
@@ -60,7 +60,7 @@ def run_diffusion(gear_args):
             gear_args.common["subject"], gear_args.diffusion["dwi_name"]
         ),
     )
-    if not gear_args.common["errors"]:
+    if rc == 0:
         try:
             DiffPreprocPipeline.execute(gear_args)
         except Exception as e:
@@ -81,7 +81,8 @@ def run_diff_qc(gear_args):
         try:
             hcpdiff_qc_mosaic.set_params(gear_args)
             hcpdiff_qc_mosaic.execute(gear_args)
-            # Clean-up and output prep
-            results.cleanup(gear_args)
         except Exception as e:
             helper_funcs.report_failure(gear_args, e, "Diffusion QC")
+
+        # Clean-up and output prep
+        results.cleanup(gear_args)

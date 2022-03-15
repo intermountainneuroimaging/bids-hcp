@@ -1,8 +1,8 @@
 import logging
 import os
 import os.path as op
-import re
 import subprocess as sp
+import sys
 from glob import glob
 
 import nibabel
@@ -21,6 +21,10 @@ class bidsInput:
         information about the type of image selected for analysis."""
         self.gtk_context = gtk_context
         self.config = self.gtk_context.config_json
+        # Use error_count to evaluate all the possible issues with the dataset and return
+        # the whole issue list prior to failing. This method is more efficient than spinning
+        # up a new image for every failure.
+        self.error_count = 0
         self.hierarchy = run_level.get_analysis_run_level_and_hierarchy(
             self.gtk_context.client, self.gtk_context.destination["id"]
         )
@@ -48,12 +52,7 @@ class bidsInput:
             gear_args.common["hcpstruct_zip"] = self.gtk_context.get_input_path(
                 "hcpstruct_zip"
             )
-        if "gdcoeffs" in self.config["inputs"]:
-            gear_args.common["gdcoeffs"] = self.gtk_context.get_input_path("gdcoeffs")
-            if re.search(gear_args.common["gdcoeffs"], " +"):
-                new_name = "_".join(gear_args.common["gdcoeffs"].split(" "))
-                os.rename(gear_args.common["gdcoeffs"], new_name)
-                gear_args.common["gdcoeffs"] = new_name
+        gear_args.common["gdcoeffs"] = helper_funcs.set_gdcoeffs_file(self.gtk_context)
 
         # Use pyBIDS finder method to capture the BIDS structure for these data
         self.layout = BIDSLayout(
@@ -66,7 +65,7 @@ class bidsInput:
         # Each stage seems to require structural scans. Find them before anything else.
         self.find_t1ws(gear_args)
         self.find_t2ws(gear_args)
-        # Fieldmaps are located and manipulated, if necessary, with verify.dcmethods
+        # Fieldmaps are located and manipulated, if necessary, with verify.set_dcmethods
 
         if any("fmri" in arg.lower() for arg in [gear_args.common["stages"]]):
             self.find_bolds(gear_args)
@@ -91,19 +90,14 @@ class bidsInput:
                 extension=["nii.gz", "nii"],
             )
         ]
-        self.t1ws = [
-            scan
-            for scan in self.t1ws
-            if "MNINonLinear" not in scan
-        ]
-        assert len(self.t1ws) > 0, (
-            "No T1w files found for subject %s!"
-            % self.hierarchy["subject_label"].split("-")[-1]
-        )
+        self.t1ws = [scan for scan in self.t1ws if "MNINonLinear" not in scan]
+        assert (
+            len(self.t1ws) > 0
+        ), f"No T1w files found for subject {self.hierarchy['subject_label'].split('-')[-1]}!"
         gear_args.structural["raw_t1s"] = self.t1ws
 
     def find_t2ws(self, gear_args):
-        """Locate T2-weighted images to be processed."""
+        """Locate (optional) T2-weighted images to be processed."""
         self.t2ws = [
             f.path
             for f in self.layout.get(
@@ -112,11 +106,7 @@ class bidsInput:
                 extension=["nii.gz", "nii"],
             )
         ]
-        self.t2ws = [
-            scan
-            for scan in self.t2ws
-            if "MNINonLinear" not in scan
-        ]
+        self.t2ws = [scan for scan in self.t2ws if "MNINonLinear" not in scan]
         gear_args.structural["raw_t2s"] = self.t2ws
 
     def find_bolds(self, gear_args):
@@ -221,6 +211,8 @@ class bidsInput:
                 ]
                 # Not crazy - the diffusion directions are opposite. Neg is first.
                 neg, pos, _, echo_spacing = self.read_PE_dir(matching_files)
+                assert neg
+                assert pos
                 gear_args.diffusion["pos_data"].append(pos)
                 gear_args.diffusion["neg_data"].append(neg)
                 ################### From HCP example script
@@ -240,11 +232,12 @@ class bidsInput:
             assert gear_args.diffusion["PE_dir"]
             # Pairs of opposite polarities are needed for the algorithm. Check for matches here
             log.debug(
-                f'Number of positive and negative DWI acquisitions match: {len(gear_args.diffusion["pos_data"]) == len(gear_args.diffusion["neg_data"])}'
+                f'Number of positive ({len(gear_args.diffusion["pos_data"])}) and negative ({len(gear_args.diffusion["neg_data"])}) DWI acquisitions match: {len(gear_args.diffusion["pos_data"]) == len(gear_args.diffusion["neg_data"])}'
             )
             assert len(gear_args.diffusion["pos_data"]) == len(
                 gear_args.diffusion["neg_data"]
             )
+
             assert len(gear_args.diffusion["pos_data"]) == num_of_directions
             gear_args.diffusion.update({"combine_data_flag": 1})
 
@@ -354,6 +347,7 @@ class bidsInput:
                     log.error(
                         f"RuntimeError: EffectiveEchoSpacing or TotalReadoutTime not defined for the fieldmap intended for {op.basename(img)}. The fieldmap is required, please fix your BIDS dataset."
                     )
+                    self.error_count += 1
             return phase_neg, phase_pos, unwarp_dir, echo_spacing
         except UnboundLocalError as e:
             # Cannot continue without an unwarp_dir or valid image list.
