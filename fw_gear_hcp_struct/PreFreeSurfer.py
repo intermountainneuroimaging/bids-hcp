@@ -97,13 +97,15 @@ def set_params(gear_args):
             params[k] = "NONE"
 
     # format dwell_time to 15 places. DwellTime is req'd by HCP
-    dwell_time = gear_arg_utils.query_json(params["t1"], "DwellTime")
-    if dwell_time:
-        params["t1samplespacing"] = format(dwell_time, ".15f")
-    dwell_time = gear_arg_utils.query_json(params["t2"], "DwellTime")
-    if dwell_time:
-        params["t2samplespacing"] = format(dwell_time, ".15f")
-    if not dwell_time:
+    dwell_time_t1 = gear_arg_utils.query_json(params["t1"], "DwellTime")
+    if dwell_time_t1:
+        params["t1samplespacing"] = format(dwell_time_t1, ".15f")
+    dwell_time_t2 = gear_arg_utils.query_json(params["t2"], "DwellTime")
+    if dwell_time_t2:
+        params["t2samplespacing"] = format(dwell_time_t2, ".15f")
+    if not dwell_time_t1 or not dwell_time_t2:
+        # Make sure that the distortion correction method and other
+        # params are inline with missing dwell time methods.
         params = check_avgdcmethod(params)
 
     res_spec_templates = [
