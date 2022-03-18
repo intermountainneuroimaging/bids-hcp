@@ -89,6 +89,7 @@ def mount_gear_home_to_tmp(gear_name, writable_dir):
     contain the files Docker is instructed to use to run the gear.
     """
     # Create temporary place to run gear
+    # TODO does gear_temp_dir need to be defined?
     work_dir = tempfile.mkdtemp(prefix=gear_temp_dir + gear_name, dir=writable_dir)
     new_FWV0 = Path(work_dir + FWV0)
     new_FWV0.mkdir(parents=True)
@@ -97,11 +98,18 @@ def mount_gear_home_to_tmp(gear_name, writable_dir):
 
     for fw_name in fw_paths:
         if fw_name.name == "gear_environ.json":  # always use real one, not dev
-            (new_FWV0 / fw_name.name).symlink_to(Path(FWV0) / fw_name.name)
+            mount_file(Path(FWV0), new_FWV0, fw_name.name)
         else:
             (new_FWV0 / fw_name.name).symlink_to(abs_path / fw_name.name)
     os.chdir(new_FWV0)
     return new_FWV0
+
+
+def mount_file(orig_path, new_path, filename):
+    """Add symlinks for writable directories."""
+    if not new_path.exists():
+        new_path.mkdir(parents=True)
+    (new_path / filename).symlink_to(orig_path / filename)
 
 
 def remove_previous_runs(gear_name, writable_dir="/var/tmp"):
@@ -116,12 +124,14 @@ def remove_previous_runs(gear_name, writable_dir="/var/tmp"):
         log.debug(f"No previous runs to worry about.")
 
 
-def unlink_gear_mounts(gear_name_for_singularity):
+def unlink_gear_mounts(gear_name_for_singularity, writable_dir="/var/tmp"):
     """
     Clean up the shared environment, since pieces (like FreeSurfer) may have
     left remnants in /tmp/flywheel/v0.
     """
-    tmp_fw_dir = os.path.join("/tmp", gear_temp_dir + gear_name_for_singularity + "*")
+    tmp_fw_dir = os.path.join(
+        writable_dir, gear_temp_dir + gear_name_for_singularity + "*"
+    )
     if tmp_fw_dir:
         for item in glob(tmp_fw_dir, recursive=True):
             if os.path.islink(item):
