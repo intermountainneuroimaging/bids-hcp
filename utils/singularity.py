@@ -15,7 +15,13 @@ FWV0 = "/flywheel/v0"
 # search for Flywheel-created files/dirs to remove, zip, use, etc. easily.
 gear_temp_dir = "gear-temp-dir-"
 
-
+#############################################################
+# Note that this entire module is being migrated into the   #
+# GearToolkit (flywheel_gear_toolkit.hpc) as of late March  #
+# 2022. Look for updated, typed code there. Future releases #
+# of HPC-compliant gears will reference                     #
+# flywheel_gear_toolkit.hpc for their methods.              #
+#############################################################
 def check_for_singularity():
     """Determine if Singularity is enabled on the system and log it."""
     if "SINGULARITY_NAME" in os.environ:
