@@ -52,5 +52,6 @@ def execute(gear_args):
         command,
         dry_run=gear_args.fw_specific["gear_dry_run"],
         environ=gear_args.environ,
+        shell=True,
         stdout_msg=stdout_msg,
     )

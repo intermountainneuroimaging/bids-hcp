@@ -50,13 +50,32 @@ def set_params(gear_args):
             "T1w",
             "T1w_acpc_dc_restore_brain.nii.gz",
         )
-        # T2w FreeSurfer Input (Full Resolution)
-        params["t2"] = op.join(
-            gear_args.dirs["bids_dir"],
-            gear_args.common["subject"],
-            "T1w",
-            "T2w_acpc_dc_restore.nii.gz",
-        )
+        # Set processing mode and T2 path (check if processing mode already set from prefreesurfer)
+        if "pre_params" in gear_args.structural:
+            # assign the same processing mode use in prefresurfer
+            params["processing-mode"] = gear_args.structural["pre_params"]['processing-mode']
+            if gear_args.structural["pre_params"]['processing-mode'] != "LegacyStyleData":
+                params["t2"] = op.join(
+                    gear_args.dirs["bids_dir"],
+                    gear_args.common["subject"],
+                    "T1w",
+                    "T2w_acpc_dc_restore.nii.gz",
+                )
+            else:
+                params["t2"] = "NONE"
+        # if PreFreeSurfer step was not run...
+        elif gear_args.common['processing-mode'] == ["HCPStyleData","auto"] and bool(gear_args.structural["raw_t2s"]):
+            params["t2"] = op.join(
+                gear_args.dirs["bids_dir"],
+                gear_args.common["subject"],
+                "T1w",
+                "T2w_acpc_dc_restore.nii.gz",
+            )
+            params["processing-mode"] = "HCPStyleData"
+        else:
+            params["t2"] = "NONE"
+            params["processing-mode"] = "LegacyStyleData"
+
     except:
         log.fatal("FreeSurfer Parameter Building Failed.")
         sys.exit(1)
@@ -69,10 +88,12 @@ def set_params(gear_args):
 
     # Validation step
     not_found = []
-    for param in ["subject-dir", "t1", "t1brain", "t2"]:
+    for param in list(params.keys()):
+        if param in ['subject', 'processing-mode']:
+            continue   # skip parameters that don't use this validation
         if param not in params.keys():
             raise Exception("FreeSurfer Parameter Building Failed.")
-        if not op.exists(params[param]):
+        if not op.exists(params[param]) and params[param] != "NONE":
             not_found.append(params[param])
     if (len(not_found) > 0) and (not gear_args.fw_specific["gear_dry_run"]):
         log.error("The following files were not found: " + ",".join(not_found))

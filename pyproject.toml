@@ -1,6 +1,6 @@
 [tool.poetry]
-name = "bids-hcp"
-version = "0.2.4"
+name = "custom-bids-hcp"
+version = "1.2.5"
 description = "Processing according to HCP pipeline methodology, adapted for BIDS structured data"
 authors = ["support@flywheel.io"]
 readme = "README.md"

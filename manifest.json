@@ -153,15 +153,25 @@
         "z-"
       ],
       "type": "string"
+    },
+    "processing-mode": {
+      "default": "auto",
+      "description": "Control HCP-Pipeline mode, (HCPStyleData): require T2w and fieldmap modalities, (LegacyStyleData): always ignore T2w and fieldmaps, use T2w and/or fieldmaps if available",
+      "enum": [
+        "auto",
+        "HCPStyleData",
+        "LegacyStyleData"
+      ],
+      "type": "string"
     }
   },
   "custom": {
     "flywheel": {
-      "suite": "Human Connectome Project"
+      "suite": "Flywheel Custom Gears"
     },
     "gear-builder": {
       "category": "analysis",
-      "image": "flywheel/bids-hcp:1.2.5_4.3.0_rc1"
+      "image": "amhe4269/custom-bids-hcp:1.2.5_4.3.0_alpha8"
     }
   },
   "description": "Runs the preprocessing steps of the Human Connectome Project Minimal Preprocessing Pipeline, described in Glasser et al. 2013. Currently this includes v4.3.0 release of PreFreeSurfer, FreeSurfer, and PostFreeSurfer pipelines. This Gear also generates some helpful QC images.",
@@ -210,7 +220,8 @@
     "REQUESTS_CA_BUNDLE": "/etc/ssl/certs/ca-certificates.crt",
     "SUBJECTS_DIR": "/opt/freesurfer/subjects",
     "WORKBENCH": "/opt/workbench/wb_command",
-    "python3": "/opt/venv/bin/python3.9"
+    "python3": "/opt/venv/bin/python3.9",
+    "python": "/opt/venv/bin/python3.9"
   },
   "inputs": {
     "FreeSurferLicense": {
@@ -228,20 +239,20 @@
     },
     "gdcoeffs": {
       "base": "file",
-      "description": "Path to gradient coefficients file",
+      "description": "Path to gradient coefficients file. If gdcoeffs not past, nonlinear gradient correction skipped.",
       "optional": true
     },
     "hcpstruct_zip": {
       "base": "file",
-      "description": "Path to previous HCP Structural analysis files. Req'd if completing func and/or diff stages only.",
+      "description": "Path to previous HCP Structural analysis files. Req'd if completing func and/or diff stages only (i.e. should be used in combination with correct stages).",
       "optional": true
     }
   },
-  "label": "BIDS-HCP Preprocessing Pipeline",
+  "label": "(Custom) BIDS-HCP Preprocessing Pipeline",
   "license": "Other",
-  "maintainer": "Flywheel <support@flywheel.io>",
-  "name": "bids-hcp",
+  "maintainer": "Amy Hegarty <amy.hegarty@colorado.edu>",
+  "name": "custom-bids-hcp",
   "source": "https://gitlab.com/flywheel-io/flywheel-apps/bids-hcp",
   "url": "https://github.com/Washington-University/Pipelines",
-  "version": "1.2.5_4.3.0_rc1"
+  "version": "1.2.5_4.3.0_alpha8"
 }

@@ -37,6 +37,25 @@ def set_params(gear_args):
     # use "FLIRT" to run FLIRT-based mcflirt_acc.sh, or "MCFLIRT" to
     # run MCFLIRT-based mcflirt.sh
     params["mctype"] = "MCFLIRT"
+
+    # add processing mode flag
+    if gear_args.common['processing-mode'] in ["HCPStyleData", "auto"] and gear_args.functional["dcmethod"] != "NONE":
+        # check feildmaps exist with dcmethod hack (dcmethod logic already used to check for usable feildmaps)
+        params["processing-mode"] = "HCPStyleData"
+        log.info(
+            f"Processing-Mode for functional preprocessing was set to HCPStyleData. \n"
+            f"Processing-Mode can be used when feildmaps are found and user sets processing mode to auto or HCPStyleData."
+        )
+    else:
+        # if above criteria are not met...
+        #   important note - HCP vs Legacy mode for Strucutral and Functional pipelines are different!
+        #   They do not need to match for sucessful processing
+        params["processing-mode"] = "LegacyStyleData"
+        log.info(
+            f"Warning: Processing-Mode is being set to LegacyStyleData, feildmaps are missing or not used. \n"
+            "Please check this is the intended action."
+        )
+
     # Initialize "NONE"s
     none_params = [
         "echodiff",

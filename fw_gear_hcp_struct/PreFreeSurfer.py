@@ -34,10 +34,63 @@ def set_params(gear_args):
 
     # Determine if key input files are accessible.
     missing = []
-    for req in ["t1", "t2"]:
-        if not any(req in k for k in gear_args.structural.keys()):
+
+    params["path"] = gear_args.dirs["bids_dir"]
+    params["subject"] = gear_args.common["subject"]
+    if (
+            isinstance(gear_args.structural["raw_t1s"], list)
+            and len(gear_args.structural["raw_t1s"]) > 1
+    ):
+        log.info(
+            f"Found more than one T1. Using the first. Please check this is the intended action."
+        )
+
+    # check if both t1 and t2 exist for processing...
+    for req in ["raw_t1s", "raw_t2s"]:
+        # make sure t1s and t2s are a list
+        gear_args.structural[req] = [gear_args.structural[req]] if isinstance(
+            gear_args.structural[req], str) else gear_args.structural[req]
+
+        # check if key-value is none
+        if not gear_args.structural[req]:
             missing.append(req)
-    if len(missing) > 0:
+
+    # set processing mode based on found structural inputs
+    if bool(gear_args.structural["raw_t1s"]) and bool(gear_args.structural["raw_t2s"]):
+        # check if user set processing mode to legacy (if so, will ignore T2)... else set to HCPStyle
+        if gear_args.common["processing-mode"] != "LegacyStyleData":
+            params["processing-mode"] = "HCPStyleData"
+        else:
+            params["processing-mode"] = "LegacyStyleData"  # force legacy style if set by user
+            log.info(
+                f"Warning: Processing-Mode was set by user to LegacyStyleData. T2w images will be ignored. \n"
+                "Please check this is the intended action."
+            )
+
+    elif bool(gear_args.structural["raw_t1s"]) and not bool(gear_args.structural["raw_t2s"]):
+        # check if user set processing mode to auto or legacy (allows no T2)...
+        #     otherwise throw error no T2w found, cannot run HCPstyle
+        if gear_args.common["processing-mode"] != "HCPStyleData":
+            params["processing-mode"] = "LegacyStyleData"
+            log.info(
+                f"No T2w images found. Processing-Mode is being set to LegacyStyleData. \n"
+                "Please check this is the intended action."
+            )
+        else:
+            # User is forcing HCPStyle processing - but not possible. Missing T2w image
+            gear_args.common["errors"].append(
+                {
+                    "message": "Missing required structural files for processing mode: HCPStyleData.",
+                    f"exception": "Missing: {missing}",
+                }
+            )
+            log.fatal(
+                f"Missing required structural files for processing mode: HCPStyleData. \n"
+                f"Unable to locate {missing} files. Will not be able to carry out analysis. "
+            )
+            sys.exit(1)
+
+    else:
         gear_args.common["errors"].append(
             {
                 "message": "Missing required structural files.",
@@ -49,21 +102,11 @@ def set_params(gear_args):
         )
         sys.exit(1)
 
-    params["path"] = gear_args.dirs["bids_dir"]
-    params["subject"] = gear_args.common["subject"]
-    if (
-        isinstance(gear_args.structural["raw_t1s"], list)
-        and len(gear_args.structural["raw_t1s"]) > 1
-    ):
-        log.info(
-            f"Found more than one T1. Using the first. Please check this is the intended action."
-        )
-    if isinstance(gear_args.structural["raw_t1s"], list):
-        params["t1"] = gear_args.structural["raw_t1s"][0]
-        params["t2"] = gear_args.structural["raw_t2s"][0]
+    params["t1"] = gear_args.structural["raw_t1s"][0]
+    if not bool(gear_args.structural["raw_t2s"]):
+        params["t2"] = "NONE"
     else:
-        params["t1"] = gear_args.structural["raw_t1s"]
-        params["t2"] = gear_args.structural["raw_t2s"]
+        params["t2"] = gear_args.structural["raw_t2s"][0]
 
     # Pre-Fill certain parameters with "NONE"
     none_params = [
@@ -100,9 +143,14 @@ def set_params(gear_args):
     dwell_time_t1 = gear_arg_utils.query_json(params["t1"], "DwellTime")
     if dwell_time_t1:
         params["t1samplespacing"] = format(dwell_time_t1, ".15f")
-    dwell_time_t2 = gear_arg_utils.query_json(params["t2"], "DwellTime")
-    if dwell_time_t2:
-        params["t2samplespacing"] = format(dwell_time_t2, ".15f")
+
+    # check if t2 image is present
+    if not bool(gear_args.structural["raw_t2s"]):
+        dwell_time_t2 = "NONE"
+    else:
+        dwell_time_t2 = gear_arg_utils.query_json(params["t2"], "DwellTime")
+        if dwell_time_t2:
+            params["t2samplespacing"] = format(dwell_time_t2, ".15f")
     if not dwell_time_t1 or not dwell_time_t2:
         # Make sure that the distortion correction method and other
         # params are inline with missing dwell time methods.
@@ -121,6 +169,11 @@ def set_params(gear_args):
         # Select the key that matches the name of the rst being populated and the resolution (determined by template_size)
         pick = [x for x in possible if gear_args.common["template_size"] in x]
         params[rst] = gear_args.templates[pick[0]]
+
+    # if t2 not present reset t2templates to the t1template (logic from HCPPipelines python wrapper)
+    if not bool(gear_args.structural["raw_t2s"]):
+        params["t2template"] = params["t1template"]
+        params["t2templatebrain"] = params["t1templatebrain"]
 
     params["brain_size"] = gear_args.common["brain_size"]
     # Examining Brain Size
@@ -191,8 +244,8 @@ def check_avgdcmethod(params):
             params["avgrdcmethod"] = "NONE"
     # If there is not an echodiff and are no fmap images, then distortion correction should also be NONE
     if (params["fmapmag"] == "NONE" and params["fmapphase"] == "NONE") or (
-        params["avgrdcmethod"] == "GeneralElectricFieldMap"
-        and params["fmapgeneralelectric"] == "NONE"
+            params["avgrdcmethod"] == "GeneralElectricFieldMap"
+            and params["fmapgeneralelectric"] == "NONE"
     ):
         log.warning(
             "avgrdcmethod was set to %s\nNo fmaps available. Setting to NONE.",
@@ -212,8 +265,8 @@ def execute(gear_args):
     command = build_command_list(command, gear_args.structural["pre_params"])
 
     stdout_msg = (
-        "PreFreeSurfer logs (stdout, stderr) will be available "
-        + 'in the file "pipeline_logs.zip" upon completion.'
+            "PreFreeSurfer logs (stdout, stderr) will be available "
+            + 'in the file "pipeline_logs.zip" upon completion.'
     )
     if gear_args.fw_specific["gear_dry_run"]:
         log.info("PreFreeSurfer command:\n{command}")

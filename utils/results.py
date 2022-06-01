@@ -75,7 +75,7 @@ def zip_output(
             'exclude_from_output': files to exclude from the output
             (e.g. hcp-struct files)
     """
-    if {scan_type} == "func":
+    if scan_type == "func" and fmri_name:
         output_zipname = op.join(
             output_dir, f"{subject}_{fmri_name}_hcp{scan_type}.zip",
         )
@@ -120,7 +120,7 @@ def zip_pipeline_logs(
     """
 
     # zip pipeline logs
-    if {scan_type} == "func":
+    if scan_type == "func" and fmri_name:
         log_zipname = op.join(output_dir, f"{fmri_name}_{scan_type}_pipeline_logs.zip")
     else:
         log_zipname = op.join(output_dir, f"{scan_type}_pipeline_logs.zip")
@@ -201,14 +201,13 @@ def cleanup(gear_args: GearToolkitContext):
         gear_args.dirs["output_dir"],
         gear_args.dirs["bids_dir"],
         gear_args.common["exclude_from_output"],
-        gear_args.functional["fmri_name"],
-        gear_args.fw_specific["gear_dry_run"],
+        fmri_name=None,
+        dry_run=gear_args.fw_specific["gear_dry_run"],
     )
     zip_pipeline_logs(
         gear_args.common["scan_type"],
         gear_args.dirs["output_dir"],
         gear_args.dirs["bids_dir"],
-        gear_args.functional["fmri_name"],
     )
     preserve_safe_list_files(
         gear_args.common["safe_list"],

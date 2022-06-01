@@ -322,12 +322,12 @@ def check_intended_for_fmaps(bids_layout, bids_dir, filepath):
 
 
 def set_gdcoeffs_file(gtk_context: GearToolkitContext):
-    """Gradient coefficients are required for the analysis. Find the specified file
+    """Gradient coefficients are **optional** for the analysis. Find the specified file
     or file set on the project level."""
     fw = gtk_context.client
     project_id = fw.get_analysis(gtk_context.destination.get("id")).parents.project
     project = fw.get_project(project_id)
-    proj_file = [f for f in project.files if "coeff" in f.name][0]
+    proj_file = next((f for f in project.files if "coeff" in f.name), None)
     if gtk_context.get_input_path("gdcoeffs"):
         gdcoeffs = gtk_context.get_input_path("gdcoeffs")
     # Look for file in project metadata
@@ -337,11 +337,15 @@ def set_gdcoeffs_file(gtk_context: GearToolkitContext):
         gdcoeffs = dest
     else:
         log.exception(
-            "Manufacturer gdcoeffs file is required for analysis.\n"
+            "Manufacturer gdcoeffs file is not specified for analysis.\n"
+            "Gradient Nonlinearity Correction will be skipped.\n"
             "Please contact your MR physicist or manufacturer for the file."
         )
+        gdcoeffs = "NONE"
     if re.search(gdcoeffs, " +"):
         gdcoeffs = sanitize_gdcoeff_name(gdcoeffs)
+
+    log.info("Using gradient nonlinearity coefficents file: "+gdcoeffs)
     return gdcoeffs
 
 

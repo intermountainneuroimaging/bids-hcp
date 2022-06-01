@@ -10,7 +10,7 @@ from utils import gear_arg_utils, helper_funcs
 
 class GearArgs:
     def __init__(
-        self, gtk_context: GearToolkitContext, env_file="/tmp/gear_environ.json"
+        self, gtk_context: GearToolkitContext, env_file=None
     ):
         """
         Sets up the structure of the GearArgs class that will be passed to many of the
@@ -37,8 +37,14 @@ class GearArgs:
             of poetry. These declarations are essential for any of the subprocess calls to
             work properly.
         """
-        with open(env_file, "r") as f:
-            self.environ = json.load(f)
+        # with open(env_file, "r") as f:
+        #     self.environ = json.load(f)
+        # if env_file loaded use that... otherwise use docker environment
+        if env_file:
+            with open(env_file, "r") as f:
+                self.environ = json.load(f)
+        else:
+            self.environ = os.environ
         self.templates = defaultdict()
         self.add_templates()
         self.dirs = {

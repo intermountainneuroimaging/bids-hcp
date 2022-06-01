@@ -50,6 +50,18 @@ def set_params(gear_args):
     if not (params["regname"] in ["FS", "MSMSulc"]):
         # Somewhat enforced by enum in manifest
         raise Exception('RegName must be "FS" or "MSMSulc"!')
+
+    # T2w FreeSurfer Input (Full Resolution) -- check processing mode (if set from PreFreeSurfer)
+    if "pre_params" in gear_args.structural:
+        # assign the same processing mode use in prefresurfer
+        params["processing-mode"] = gear_args.structural["pre_params"]['processing-mode']
+
+    # if PreFreeSurfer step was not run...
+    elif gear_args.common['processing-mode'] in ["HCPStyleData", "auto"] and bool(gear_args.structural["raw_t2s"]):
+        params["processing-mode"] = "HCPStyleData"
+    else:
+        params["processing-mode"] = "LegacyStyleData"
+
     # printcom is causing gear failure. Omit unless/until fixed.
     # params["printcom"] = " "
     # Unaccounted for parameters:

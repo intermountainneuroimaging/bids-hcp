@@ -107,6 +107,10 @@ RUN ln -s /opt/workbench/bin_linux64/wb_command /opt/workbench/wb_command
 #RUN ln -sf /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.24 /opt/matlab/v92/sys/os/glnxa64/libstdc++.so.6
 
 # ENV preservation for Flywheel Engine
+
+# add new enviornment?
+COPY tmp/gear_environ.json /tmp/gear_environ.json
+
 # Do not remove this. utils.bids.environment depends on it and is called heavily through out suite.
 RUN python3 -c 'import os, json; f = open("/tmp/gear_environ.json", "w"); json.dump(dict(os.environ), f)'
 
@@ -143,10 +147,10 @@ ENV PATH="$POETRY_HOME/bin:$PATH"
 RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python
 
 # To address the "hostname: Temporary failure in name resolution"
-RUN echo "bids-hcp" > /etc/hostname \
-    echo "127.0.0.1 localhost" > /etc/hosts \
-    echo "::1 localhost" >> /etc/hosts \
-    echo "127.0.1.1 bids-hcp" >> /etc/hosts
+#RUN echo "bids-hcp" > /etc/hostname \
+#    echo "127.0.0.1 localhost" > /etc/hosts \
+#    echo "::1 localhost" >> /etc/hosts \
+#    echo "127.0.1.1 bids-hcp" >> /etc/hosts
 
 # Installing main dependencies
 ARG FLYWHEEL=/flywheel/v0

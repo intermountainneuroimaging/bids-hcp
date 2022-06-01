@@ -32,19 +32,25 @@ def run(gear_args, bids_layout):
     for i, fmri_name in enumerate(gear_args.functional["fmri_names"]):
         set_func_args_single_file(gear_args, fmri_name, i)
 
-    rc = set_func_args_list(gear_args, bids_layout)
-    if ("Volume" in gear_args.common["stages"]) and (rc == 0):
-        log.debug("Building and running fMRI Volume pipeline.")
-        rc = run_fmri_vol(gear_args)
+        rc = set_func_args_list(gear_args, bids_layout)
+        if ("Volume" in gear_args.common["stages"]) and (rc == 0):
+            log.debug("Building and running fMRI Volume pipeline.")
+            rc = run_fmri_vol(gear_args)
 
-    if ("Surface" in gear_args.common["stages"]) and (rc == 0):
-        log.debug("Building and running fMRI Surface pipeline.")
-        rc = run_fmri_surf(gear_args)
+        if ("Surface" in gear_args.common["stages"]) and (rc == 0):
+            log.debug("Building and running fMRI Surface pipeline.")
+            rc = run_fmri_surf(gear_args)
 
-    # Generate HCP-Functional QC Images
-    # QC script was written for specific type of DCMethod
-    if rc == 0:
-        run_func_qc(gear_args)
+        # Generate HCP-Functional QC Images
+        # QC script was written for specific type of DCMethod
+        if rc == 0:
+            run_func_qc(gear_args)
+
+    log.debug("Zipping functional outputs.")
+    # Clean-up and output prep
+    gear_args.common["output_config_filename"]='hcpfunc_config.json'  # patch for "combined" config zip inside cleanup
+    results.cleanup(gear_args)
+
     return rc
 
 
@@ -104,30 +110,25 @@ def run_func_qc(gear_args):
         helper_funcs.report_failure(gear_args, e, "Functional QC (func_main.py)")
 
     # Even if the QC didn't execute properly, the logs and processed files should be reported
-    results.zip_output(
-        gear_args.common["scan_type"],
-        gear_args.common["subject"],
-        gear_args.dirs["output_dir"],
-        gear_args.dirs["bids_dir"],
-        gear_args.common["exclude_from_output"],
-        gear_args.functional["fmri_name"],
-        gear_args.fw_specific["gear_dry_run"],
-    )
-    log.debug("Zipping functional outputs.")
-    # Clean-up and output prep
-    results.cleanup(gear_args)
+    # results.zip_output(
+    #     gear_args.common["scan_type"],
+    #     gear_args.common["subject"],
+    #     gear_args.dirs["output_dir"],
+    #     gear_args.dirs["bids_dir"],
+    #     gear_args.common["exclude_from_output"],
+    #     gear_args.functional["fmri_name"],
+    #     gear_args.fw_specific["gear_dry_run"],
+    # )
+    # log.debug("Zipping functional outputs.")
+    # # Clean-up and output prep
+    # results.cleanup(gear_args)
 
 
 def set_func_args_single_file(gear_args, specific_scan_name, scan_number_in_list):
     """Set the pre-requisite information that will be used to build the shell commands for functional processing."""
     gear_args.functional["fmri_name"] = specific_scan_name
-    gear_args.functional["fmri_timecourse"] = gear_args.functional[
-        "fmri_timecourse_all"
-    ][scan_number_in_list]
-    gear_args.functional["fmri_scout"] = gear_args.functional["fmri_scouts_all"][
-        scan_number_in_list
-    ]
-
+    gear_args.functional["fmri_timecourse"] = gear_args.functional["fmri_timecourse_all"][scan_number_in_list]
+    gear_args.functional["fmri_scout"] = gear_args.functional["fmri_scouts_all"][scan_number_in_list]
 
 def set_func_args_list(gear_args, bids_layout):
     # Add distortion correction information
