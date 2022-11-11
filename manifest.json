@@ -175,7 +175,7 @@
     }
   },
   "description": "Runs the preprocessing steps of the Human Connectome Project Minimal Preprocessing Pipeline, described in Glasser et al. 2013. Currently this includes v4.3.0 release of PreFreeSurfer, FreeSurfer, and PostFreeSurfer pipelines. This Gear also generates some helpful QC images.",
-  "environment": {
+  "environment":  {
     "CARET7DIR": "/opt/workbench/bin_linux64",
     "FLYWHEEL": "/flywheel/v0",
     "FMRI_ANALYSIS_DIR": "/opt/freesurfer/fsfast",
