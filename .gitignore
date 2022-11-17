@@ -6,3 +6,5 @@ __pycache__
 /tmp/
 .idea
 virtualenv
+thisjob/
+pl_dir/
