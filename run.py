@@ -15,9 +15,12 @@ from utils.bids import bids_file_locator
 from utils.set_gear_args import GearArgs
 from utils.singularity import run_in_tmp_dir
 from flywheel_gear_toolkit.licenses.freesurfer import install_freesurfer_license
+from utils import freesurfer_utils
 
 log = logging.getLogger(__name__)
 
+# FWV0 = "/flywheel/v0"
+# os.chdir(FWV0)
 
 def main(gtk_context):
     # Set up the templates, config options from the config_json, and other essentials
@@ -84,6 +87,7 @@ if __name__ == "__main__":
 
     # Get access to gear config, inputs, and sdk client if enabled.
     with GearToolkitContext(config_path='/flywheel/v0/config.json') as gtk_context:
+        # os.environ["SINGULARITY_NAME"] = "TEST1"
         scratch_dir = run_in_tmp_dir(gtk_context.config["gear-writable-dir"])
     # Has to be instantiated twice here, since parent directories might have
     # changed
@@ -105,6 +109,8 @@ if __name__ == "__main__":
             gtk_context,
             FREESURFER_LICENSE,
         )
+
+        freesurfer_utils.setup_freesurfer_for_singularity(FWV0)
 
         # Pass the gear context into main function defined above.
         return_code = main(gtk_context)

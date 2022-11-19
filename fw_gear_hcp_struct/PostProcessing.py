@@ -7,6 +7,7 @@ rather than the registered and segmented volumes and surfaces (L296-L317).
 part of the hcp-struct gear
 """
 import logging
+import os
 import os.path as op
 
 import pandas as pd
@@ -119,7 +120,7 @@ def execute(gear_args):
         "-s",
         "-f",
         "{}/{}/T1w/{}".format(gear_args.dirs["bids_dir"], subject, subject),
-        "/opt/freesurfer/subjects/",
+        os.environ["SUBJECTS_DIR"],
     ]
     exec_command(
         command,
