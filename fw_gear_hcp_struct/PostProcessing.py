@@ -122,6 +122,9 @@ def execute(gear_args):
         "{}/{}/T1w/{}".format(gear_args.dirs["bids_dir"], subject, subject),
         os.environ["SUBJECTS_DIR"],
     ]
+    if gear_args.fw_specific["gear_dry_run"]:
+        log.info("Postprocessing command:\n{command}")
+
     exec_command(
         command,
         dry_run=gear_args.fw_specific["gear_dry_run"],
