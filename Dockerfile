@@ -146,6 +146,9 @@ ENV PATH="$POETRY_HOME/bin:$PATH"
 # get-poetry respects ENV
 RUN curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python
 
+# add permissions to run poetry as singularity user
+RUN chmod a+rx -R /opt/poetry/
+
 # To address the "hostname: Temporary failure in name resolution"
 #RUN echo "bids-hcp" > /etc/hostname \
 #    echo "127.0.0.1 localhost" > /etc/hosts \
@@ -157,8 +160,9 @@ ARG FLYWHEEL=/flywheel/v0
 COPY pyproject.toml poetry.lock $FLYWHEEL/
 RUN poetry install --no-dev
 
-COPY scripts /tmp/scripts
-COPY scenes /tmp/scenes
+RUN mkdir $FLYWHEEL/tmp/
+COPY scripts $FLYWHEEL/tmp/scripts
+COPY scenes $FLYWHEEL/tmp/scenes
 
 ## Installing the current project (most likely to change, above layer can be cached)
 ## Note: poetry requires a README.md to install the current project

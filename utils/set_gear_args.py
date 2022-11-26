@@ -51,8 +51,8 @@ class GearArgs:
             "work_dir": gtk_context.work_dir,
             "output_dir": gtk_context.output_dir,
             "bids_dir": op.join(gtk_context.work_dir, "bids"),
-            "script_dir": "/tmp/scripts",
-            "scenes_dir": "/tmp/scenes",
+            "script_dir": "/flywheel/v0/tmp/scripts",
+            "scenes_dir": "/flywheel/v0/tmp/scenes",
         }
         self.structural = defaultdict()
         # Need a default 'fmri_name', as the value is not set for structural
