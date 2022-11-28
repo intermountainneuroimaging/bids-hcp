@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import json
 import logging
 import os.path as op
 import sys
@@ -80,6 +81,34 @@ def main(gtk_context):
         return_code = e_code
     else:
         return_code = 0
+
+    # save metadata
+    metadata = {
+        "analysis": {"info": {"resources used": {}, }, },
+    }
+
+    lsResults = sp.Popen(
+        "cd "+gtk_context.output_dir+"; ls *.csv", shell=True, stdout=sp.PIPE, stderr=sp.PIPE, universal_newlines=True
+    )
+    stdout, _ = lsResults.communicate()
+    files = stdout.strip("\n").split("\n")
+
+    for f in files:
+        if Path(f).exists():
+            stats_df = pd.read_csv(f)
+            as_json = stats_df.drop(stats_df.columns[0], axis=1).to_dict(
+                "records"
+            )[0]
+            name = ".".join("_".join(f.split("_")[1:]).split(".")[0:-1]).replace(".","_")
+            metadata["analysis"]["info"][name] = as_json
+
+    if len(metadata["analysis"]["info"]) > 0:
+        with open(f"{gtk_context.output_dir}/.metadata.json", "w") as fff:
+            json.dump(metadata, fff)
+        log.info(f"Wrote {gtk_context.output_dir}/.metadata.json")
+    else:
+        log.info("No data available to save in .metadata.json.")
+    log.debug(".metadata.json: %s", json.dumps(metadata, indent=4))
 
     return return_code
 
