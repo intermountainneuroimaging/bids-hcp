@@ -144,14 +144,14 @@ if __name__ == "__main__":
         # Pass the gear context into main function defined above.
         return_code = main(gtk_context)
 
-        # clean up (might be necessary when running in a shared computing environment)
-        if scratch_dir:
-            log.debug("Removing scratch directory")
-            for thing in scratch_dir.glob("*"):
-                if thing.is_symlink():
-                    thing.unlink()  # don't remove anything links point to
-                    log.debug("unlinked %s", thing.name)
-            shutil.rmtree(scratch_dir)
-            log.debug("Removed %s", scratch_dir)
+    # clean up (might be necessary when running in a shared computing environment)
+    if scratch_dir:
+        log.debug("Removing scratch directory")
+        for thing in scratch_dir.glob("*"):
+            if thing.is_symlink():
+                thing.unlink()  # don't remove anything links point to
+                log.debug("unlinked %s", thing.name)
+        shutil.rmtree(scratch_dir)
+        log.debug("Removed %s", scratch_dir)
 
-        sys.exit(return_code)
+    sys.exit(return_code)

@@ -177,4 +177,6 @@ RUN chmod a+x $FLYWHEEL/run.py && \
     echo "hcp-gear" > /etc/hostname && \
     rm -rf $HOME/.npm
 
+RUN umask 002
+
 ENTRYPOINT ["poetry","run","python","/flywheel/v0/run.py"]
