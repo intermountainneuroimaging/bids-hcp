@@ -6,6 +6,8 @@ import sys
 import shutil
 from pathlib import Path
 import os
+import subprocess as sp
+import pandas as pd
 from flywheel_gear_toolkit import GearToolkitContext
 
 from fw_gear_hcp_diff import diff_main
@@ -88,7 +90,7 @@ def main(gtk_context):
     }
 
     lsResults = sp.Popen(
-        "cd "+gtk_context.output_dir+"; ls *.csv", shell=True, stdout=sp.PIPE, stderr=sp.PIPE, universal_newlines=True
+        "cd "+str(gtk_context.output_dir)+"; ls *.csv", shell=True, stdout=sp.PIPE, stderr=sp.PIPE, universal_newlines=True
     )
     stdout, _ = lsResults.communicate()
     files = stdout.strip("\n").split("\n")

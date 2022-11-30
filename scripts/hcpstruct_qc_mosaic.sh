@@ -19,19 +19,29 @@ imgroot=$3
 #set -x
 # Set and run the substitutions.
 qcmosaic1 ${subject_dir}/T1w/T1w_acpc_dc ${imgroot}acpc_T1 # T1 acpc
-qcmosaic1 ${subject_dir}/T1w/T2w_acpc_dc ${imgroot}acpc_T2 # T2 acpc
+if [ -f "${subject_dir}/T1w/T2w_acpc_dc" ]; then
+  qcmosaic1 ${subject_dir}/T1w/T2w_acpc_dc ${imgroot}acpc_T2 # T2 acpc
+fi
 
 qcmosaic1 ${subject_dir}/T1w/T1w_acpc_dc_restore ${imgroot}acpc_T1_biascorrected # T1 acpc after bias correction
-qcmosaic1 ${subject_dir}/T1w/T2w_acpc_dc_restore ${imgroot}acpc_T2_biascorrected # T2 acpc after bias correction
+if [ -f "${subject_dir}/T1w/T2w_acpc_dc_restore" ]; then
+  qcmosaic1 ${subject_dir}/T1w/T2w_acpc_dc_restore ${imgroot}acpc_T2_biascorrected # T2 acpc after bias correction
+fi
 
-qcmosaic2 ${subject_dir}/T1w/T1w_acpc_dc ${subject_dir}/T1w/T2w_acpc_dc ${imgroot}acpc_T2_T1xT2alignment # T2 acpc volume with T1 edges
-qcmosaic2 ${subject_dir}/T1w/T2w_acpc_dc ${subject_dir}/T1w/T1w_acpc_dc ${imgroot}acpc_T1_T1xT2alignment # T1 acpc volume with T2 edges
+if [ -f "${subject_dir}/T1w/T2w_acpc_dc" ]; then
+  qcmosaic2 ${subject_dir}/T1w/T1w_acpc_dc ${subject_dir}/T1w/T2w_acpc_dc ${imgroot}acpc_T2_T1xT2alignment # T2 acpc volume with T1 edges
+  qcmosaic2 ${subject_dir}/T1w/T2w_acpc_dc ${subject_dir}/T1w/T1w_acpc_dc ${imgroot}acpc_T1_T1xT2alignment # T1 acpc volume with T2 edges
+fi
 
 qcmosaic2 ${subject_dir}/T1w/ribbon ${subject_dir}/T1w/T1w_acpc_dc_restore ${imgroot}acpc_T1_ribbon #T1 acpc with freesurfer edges
-qcmosaic2 ${subject_dir}/T1w/ribbon ${subject_dir}/T1w/T2w_acpc_dc_restore ${imgroot}acpc_T2_ribbon #T2 acpc with freesurfer edges
+if [ -f "${subject_dir}/T1w/T2w_acpc_dc_restore" ]; then
+  qcmosaic2 ${subject_dir}/T1w/ribbon ${subject_dir}/T1w/T2w_acpc_dc_restore ${imgroot}acpc_T2_ribbon #T2 acpc with freesurfer edges
+fi
 
 qcmosaic2 ${T1wTemplate} ${subject_dir}/MNINonLinear/T1w_restore ${imgroot}mni_T1 # T1 MNI with template edges
-qcmosaic2 ${T1wTemplate} ${subject_dir}/MNINonLinear/T2w_restore ${imgroot}mni_T2 # T2 MNI with template edges
+if [ -f "${subject_dir}/T1w/T2w_restore" ]; then
+  qcmosaic2 ${T1wTemplate} ${subject_dir}/MNINonLinear/T2w_restore ${imgroot}mni_T2 # T2 MNI with template edges
+fi
 
 #qcmosaic2 ${subject_dir}/MNINonLinear/ribbon ${subject_dir}/MNINonLinear/T1w_restore ${imgroot}mni_T1_ribbon
 #qcmosaic2 ${subject_dir}/MNINonLinear/ribbon ${subject_dir}/MNINonLinear/T2w_restore ${imgroot}mni_T2_ribbon
