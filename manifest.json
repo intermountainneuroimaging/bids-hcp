@@ -163,18 +163,58 @@
         "LegacyStyleData"
       ],
       "type": "string"
+    },
+    "gear-writable-dir": {
+        "default": "/pl/active/ics/fw_temp_data",
+        "description": "Gears expect to be able to write temporary files in /flywheel/v0/.  If this location is not writable (such as when running in Singularity), this path will be used instead.  fMRIPrep creates a large number of files so this disk space should be fast and local.",
+        "type": "string"
+    },
+    "slurm-cpu": {
+        "default": "4",
+        "description": "[SLURM] How many cpu-cores to request per command/task. This is used for the underlying '--cpus-per-task' option. If not running on HPC, then this flag is ignored",
+        "type": "string"
+    },
+    "slurm-ram": {
+        "default": "28G",
+        "description": "[SLURM] How much RAM to request. This is used for the underlying '--mem-per-cpu' option. If not running on HPC, then this flag is ignored",
+        "type": "string"
+    },
+    "slurm-ntasks": {
+        "default": "1",
+        "description": "[SLURM] Total number of tasks/commands across all nodes (not equivalent to neuroimaging tasks). Using a value greater than 1 for code that has not been parallelized will not improve performance (and may break things).",
+        "type": "string"
+    },
+    "slurm-nodes": {
+        "default": "1",
+        "description": "[SLURM] How many HPC nodes to run on",
+        "type": "string"
+    },
+    "slurm-partition": {
+        "default": "blanca-ics",
+        "description": "[SLURM] Blanca, Alpine, or Summit partitions can be entered",
+        "type": "string"
+    },
+    "slurm-qos": {
+        "default": "blanca-ics",
+        "description": "[SLURM] For Blanca the QOS has a different meaning, ie blanca-ics vs blanca-ibg, etc. For Alpine and Summit, the QOS should be set to normal if running a job for 1 day or less, and set to long if running a job with a maximum walltime of 7 days",
+        "type": "string"
+    },
+    "slurm-time": {
+      "default": "1428",
+      "description": "[SLURM] Maximum walltime requested after which your job will be cancelled if it hasn't finished. Default to 1 day",
+      "type": "string"
     }
   },
   "custom": {
     "flywheel": {
-      "suite": "Flywheel Custom Gears"
+      "suite": "Preprocessing"
     },
     "gear-builder": {
       "category": "analysis",
-      "image": "amhe4269/custom-bids-hcp:1.2.5_4.3.0_alpha8"
+      "image": "amhe4269/bids-hcp:1.2.5_4.3.0_inc1.1"
     }
   },
-  "description": "Runs the preprocessing steps of the Human Connectome Project Minimal Preprocessing Pipeline, described in Glasser et al. 2013. Currently this includes v4.3.0 release of PreFreeSurfer, FreeSurfer, and PostFreeSurfer pipelines. This Gear also generates some helpful QC images.",
+  "description": "(HPC Compatible) Runs the preprocessing steps of the Human Connectome Project Minimal Preprocessing Pipeline, described in Glasser et al. 2013. Currently this includes v4.3.0 release of PreFreeSurfer, FreeSurfer, and PostFreeSurfer pipelines. This Gear also generates some helpful QC images.",
   "environment":  {
     "CARET7DIR": "/opt/workbench/bin_linux64",
     "FLYWHEEL": "/flywheel/v0",
@@ -224,7 +264,7 @@
     "python": "/opt/venv/bin/python3.9"
   },
   "inputs": {
-    "FreeSurferLicense": {
+    "freesurfer_license": {
       "base": "file",
       "description": "FreeSurfer license.txt file",
       "optional": true
@@ -248,11 +288,11 @@
       "optional": true
     }
   },
-  "label": "(Custom) BIDS-HCP Preprocessing Pipeline",
+  "label": "BIDS-HCP Preprocessing Pipeline",
   "license": "Other",
   "maintainer": "Amy Hegarty <amy.hegarty@colorado.edu>",
-  "name": "custom-bids-hcp",
-  "source": "https://gitlab.com/flywheel-io/flywheel-apps/bids-hcp",
+  "name": "bids-hcp",
+  "source": "https://github.com/intermountainneuroimaging/bids-hcp.git",
   "url": "https://github.com/Washington-University/Pipelines",
-  "version": "1.2.5_4.3.0_alpha8"
+  "version": "1.2.5_4.3.0_inc1.1"
 }

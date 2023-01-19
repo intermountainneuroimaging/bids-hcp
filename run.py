@@ -1,8 +1,13 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
+import json
 import logging
 import os.path as op
 import sys
-
+import shutil
+from pathlib import Path
+import os
+import subprocess as sp
+import pandas as pd
 from flywheel_gear_toolkit import GearToolkitContext
 
 from fw_gear_hcp_diff import diff_main
@@ -11,9 +16,14 @@ from fw_gear_hcp_struct import struct_main
 from utils import environment, gear_arg_utils, helper_funcs
 from utils.bids import bids_file_locator
 from utils.set_gear_args import GearArgs
+from utils.singularity import run_in_tmp_dir
+from flywheel_gear_toolkit.licenses.freesurfer import install_freesurfer_license
+from utils import freesurfer_utils
 
 log = logging.getLogger(__name__)
 
+# FWV0 = "/flywheel/v0"
+# os.chdir(FWV0)
 
 def main(gtk_context):
     # Set up the templates, config options from the config_json, and other essentials
@@ -70,25 +80,80 @@ def main(gtk_context):
             e_code += diff_main.run(gear_args)
 
     if e_code >= 1:
-        sys.exit(1)
+        return_code = e_code
     else:
-        sys.exit(0)
+        return_code = 0
 
+    # save metadata
+    metadata = {
+        "analysis": {"info": {"resources used": {}, }, },
+    }
+
+    lsResults = sp.Popen(
+        "cd "+str(gtk_context.output_dir)+"; ls *.csv", shell=True, stdout=sp.PIPE, stderr=sp.PIPE, universal_newlines=True
+    )
+    stdout, _ = lsResults.communicate()
+    files = stdout.strip("\n").split("\n")
+
+    for f in files:
+        if Path(f).exists():
+            stats_df = pd.read_csv(f)
+            as_json = stats_df.drop(stats_df.columns[0], axis=1).to_dict(
+                "records"
+            )[0]
+            name = ".".join("_".join(f.split("_")[1:]).split(".")[0:-1]).replace(".","_")
+            metadata["analysis"]["info"][name] = as_json
+
+    if len(metadata["analysis"]["info"]) > 0:
+        with open(f"{gtk_context.output_dir}/.metadata.json", "w") as fff:
+            json.dump(metadata, fff)
+        log.info(f"Wrote {gtk_context.output_dir}/.metadata.json")
+    else:
+        log.info("No data available to save in .metadata.json.")
+    log.debug(".metadata.json: %s", json.dumps(metadata, indent=4))
+
+    return return_code
 
 if __name__ == "__main__":
-    # TODO add Singularity capability
-    # Singularity help https://singularityhub.github.io/singularity-hpc/r/bids-hcppipelines/
 
     # Get access to gear config, inputs, and sdk client if enabled.
-    # with GearToolkitContext() as gtk_context:
-    #   ...
-    with GearToolkitContext(config_path='/flywheel/v0/config.json',
-                            manifest_path='/flywheel/v0/manifest.json') as gtk_context:
-
+    with GearToolkitContext(config_path='/flywheel/v0/config.json') as gtk_context:
+        # os.environ["SINGULARITY_NAME"] = "TEST1"
+        scratch_dir = run_in_tmp_dir(gtk_context.config["gear-writable-dir"])
+    # Has to be instantiated twice here, since parent directories might have
+    # changed
+    with GearToolkitContext() as gtk_context:
         # Initialize logging, set logging level based on `debug` configuration
         # key in gear config.
         gtk_context.init_logging()
-        # Copy the key to the proper location in Docker for all analyses.
-        environment.set_freesurfer_license(gtk_context)
+
+        FWV0 = Path.cwd()
+        log.info("Running gear in %s", FWV0)
+
+        # Constants that do not need to be changed
+        FREESURFER_LICENSE = str(FWV0 / "freesurfer/license.txt")
+        # MAKE SURE FREESURFER LICENSE IS FOUND
+        os.environ["FS_LICENSE"] = str(FWV0 / "freesurfer/license.txt")
+
+        # Now install the license
+        install_freesurfer_license(
+            gtk_context,
+            FREESURFER_LICENSE,
+        )
+
+        freesurfer_utils.setup_freesurfer_for_singularity(FWV0)
+
         # Pass the gear context into main function defined above.
-        main(gtk_context)
+        return_code = main(gtk_context)
+
+    # clean up (might be necessary when running in a shared computing environment)
+    if scratch_dir:
+        log.debug("Removing scratch directory")
+        for thing in scratch_dir.glob("*"):
+            if thing.is_symlink():
+                thing.unlink()  # don't remove anything links point to
+                log.debug("unlinked %s", thing.name)
+        shutil.rmtree(scratch_dir)
+        log.debug("Removed %s", scratch_dir)
+
+    sys.exit(return_code)

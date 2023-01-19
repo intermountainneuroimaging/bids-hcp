@@ -29,12 +29,12 @@ def set_params(gear_args):
     params = OrderedDict()
     params["subject"] = gear_args.common["subject"]
     # Location to Put FreeSurfer Subject's Folder
-    gear_args.environ["SUBJECTS_DIR"] = op.join(
+    subjects_dir = op.join(
         gear_args.dirs["bids_dir"], gear_args.common["subject"], "T1w"
     )
     # To keep backwards compatibility, retain the next line
     # Do not change the hyphen
-    params["subject-dir"] = gear_args.environ["SUBJECTS_DIR"]
+    params["subject-dir"] = subjects_dir
     try:
         # T1w FreeSurfer Input (Full Resolution)
         params["t1"] = op.join(

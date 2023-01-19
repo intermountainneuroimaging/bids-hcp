@@ -59,6 +59,7 @@ def execute(gear_args):
         )
         stdout, stderr = result.communicate()
         log.info(result.returncode)
+        log.info(stderr)
         log.info(stdout)
 
         if result.returncode != 0:
