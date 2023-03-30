@@ -68,7 +68,8 @@ def fetch_previous_results_zip_file(
 
 def set_FS_templates(orig_subject_dir: Path):
     """Set the template files for FreeSurfer"""
-    Path(os.environ["SUBJECTS_DIR"]).mkdir(parents=True)
+    os.makedirs(os.environ["SUBJECTS_DIR"], exist_ok=True)
+    # Path(os.environ["SUBJECTS_DIR"]).mkdir(parents=True)
     for template in orig_subject_dir.glob("*"):
         if not os.path.exists(Path(os.environ["SUBJECTS_DIR"]) / template.name):
             os.symlink(template, Path(os.environ["SUBJECTS_DIR"]) / template.name )

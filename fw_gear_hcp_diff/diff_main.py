@@ -19,8 +19,6 @@ def run(gear_args):
     """
     gear_args.common["scan_type"] = "diff"
     rc = 0
-    # Get file list and configuration from hcp-struct zipfile
-    helper_funcs.run_struct_zip_setup(gear_args)
 
     rc = run_diffusion(gear_args)
 
@@ -84,5 +82,5 @@ def run_diff_qc(gear_args):
         except Exception as e:
             helper_funcs.report_failure(gear_args, e, "Diffusion QC")
 
-        # Clean-up and output prep
-        results.cleanup(gear_args)
+        # # Clean-up and output prep
+        # results.cleanup(gear_args)  ## DONT ZIP INTERMEDIATELY

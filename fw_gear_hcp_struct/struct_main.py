@@ -41,26 +41,6 @@ def run(gear_args):
         rc = run_FS(gear_args)
     ###########################################################################
     if ("PostFreeSurfer" in gear_args.common["stages"]) and (rc == 0):
-        if not "FreeSurfer" in gear_args.common["stages"].split():
-            # Get the zipped results from a previous run to continue the analysis
-            # without re-running FS.
-            if "hcpstruct_zip" in gear_args.common.keys():
-                (
-                    hcp_struct_list,
-                    hcp_struct_config,
-                ) = gear_arg_utils.make_hcp_zip_available(gear_args)
-            else:
-                log.error(
-                    f"hcpstruct_zip (in Inputs) must be specified when selecting PostFreeSurfer"
-                    f"without running FreeSurfer at the same time."
-                )
-                gear_args.common["errors"].append(
-                    {
-                        "message": "Struct PostProcessing defining/unzipping HCPstruct_zip",
-                        "exception": "hcpstruct_zip (in Inputs) must be specified when selecting PostFreeSurfer without running FreeSurfer at the same time.",
-                    }
-                )
-
         rc = run_postFS(gear_args)
         if (gear_args.fw_specific["gear_dry_run"] is False) and (rc == 0):
             run_struct_qc(gear_args)
@@ -97,11 +77,6 @@ def check_FS_install(gear_args):
         gear_args.common["output_config"],
         gear_args.common["output_config_filename"],
     ) = struct_utils.configs_to_export(gear_args)
-
-    gear_args.common["output_zip_name"] = op.join(
-        gear_args.dirs["output_dir"],
-        "{}_hcpstruct.zip".format(gear_args.common["subject"]),
-    )
 
 
 def run_preFS(gear_args):
@@ -160,8 +135,7 @@ def run_FS(gear_args):
         # Run FreeSurferPipeline.sh from subprocess.run
         try:
             FreeSurfer.execute(gear_args)
-            # Make the hcp_struct_zip file available in an 'immutable' field
-            gear_args.common["hcpstruct_zip"] = gear_args.common["output_zip_name"]
+
         except Exception as e:
             # Since this is such a time intensive step, keep the log of what
             # was accomplished for quicker debugging.
@@ -208,6 +182,7 @@ def run_postFS(gear_args):
         else:
             try:
                 PostFreeSurfer.execute(gear_args)
+
             except Exception as e:
                 rc = helper_funcs.report_failure(
                     gear_args, e, "Compiling PostFreeSurfer stats", "fatal"
@@ -221,6 +196,7 @@ def run_postFS(gear_args):
             PostProcessing.set_params(gear_args)
             if gear_args.fw_specific["gear_dry_run"] is False:
                 PostProcessing.execute(gear_args)
+
         except Exception as e:
             rc = helper_funcs.report_failure(
                 gear_args, e, "Executing PostFreeSurfer", "fatal"
@@ -245,4 +221,4 @@ def run_struct_qc(gear_args):
         helper_funcs.report_failure(gear_args, e, "Structural QC")
 
     # Clean-up and output prep
-    results.cleanup(gear_args)
+    # results.cleanup(gear_args)  ## don't do an intermediate zip output: only on zipped results at the end.

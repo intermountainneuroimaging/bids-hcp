@@ -226,3 +226,78 @@ def set_subject(gtk_context):
 
     log.info("Using %s as Subject ID.", subject)
     return subject
+
+
+def set_session(gtk_context):
+    """
+    Part of the original implementation of the HCP Gears, but may be extraneous.
+    set_session queries the subject from the current gear configuration
+    or session container (SDK).
+    Exits ensuring the value of the session is valid or raises an Exception.
+    Args:
+        gtk_context (flywheel.gear_context.GearContext): The gear context object
+            with gear configuration attribute that is interrogated.
+    Raises:
+        Exception: Zero-length session
+        Exception: If the current analysis container does not have a session
+            container as a parent.
+    """
+
+    session = ""
+    # Subject in the gear configuration overrides everything else
+    if "session" in gtk_context.config.keys():
+        # Correct for non-friendly characters
+        session = re.sub("[^0-9a-zA-Z./]+", "_", gtk_context.config["session"])
+        if len(session) == 0:
+            log.fatal("Cannot have a zero-length session.")
+    else:
+        # Assuming valid client
+        fw = gtk_context.client
+        # Get the analysis destination ID
+        dest_id = gtk_context.destination["id"]
+        # Assume that the destination object has "subject" as a parent
+        # This will raise an exception otherwise
+        dest = fw.get(dest_id)
+        if "session" in dest.parents:
+            sess = fw.get(dest.parents["session"])
+            session = sess.label
+        else:
+            log.fatal(
+                "The current analysis container does not have a session "
+                + "container as a parent."
+            )
+
+    log.info("Using %s as Session ID.", session)
+    return session
+
+
+def set_destid(gtk_context):
+    """
+    Part of the original implementation of the HCP Gears, but may be extraneous.
+    set_destid queries the subject from the current gear configuration
+    or destid container (SDK).
+    Exits ensuring the value of the session is valid or raises an Exception.
+    Args:
+        gtk_context (flywheel.gear_context.GearContext): The gear context object
+            with gear configuration attribute that is interrogated.
+    Raises:
+        Exception: Zero-length destid
+        Exception: If the current analysis container does not have a destid.
+    """
+
+    dest_id = ""
+    # Subject in the gear configuration overrides everything else
+    if "dest_id" in gtk_context.config.keys():
+        # Correct for non-friendly characters
+        dest_id = re.sub("[^0-9a-zA-Z./]+", "_", gtk_context.config["dest_id"])
+        if len(dest_id) == 0:
+            log.fatal("Cannot have a zero-length dest_id.")
+    else:
+        # Assuming valid client
+        fw = gtk_context.client
+        # Get the analysis destination ID
+        dest_id = gtk_context.destination["id"]
+
+    log.info("Using %s as Destination ID.", dest_id)
+    return dest_id
+

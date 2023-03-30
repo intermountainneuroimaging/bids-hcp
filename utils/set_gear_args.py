@@ -85,6 +85,8 @@ class GearArgs:
         self.common.update(
             {
                 "subject": gear_arg_utils.set_subject(gtk_context),
+                "session": gear_arg_utils.set_session(gtk_context),
+                "destid": gear_arg_utils.set_destid(gtk_context),
                 "current_stage": self.common["stages"].split()[0],
                 "exclude_from_output": None,
                 "errors": [],
