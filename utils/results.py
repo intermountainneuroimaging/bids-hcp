@@ -59,9 +59,11 @@ def preserve_safe_list_files(safe_list, output_dir, dry_run=False):
 
 
 def zip_output(
-    scan_type, subject, output_dir, bids_dir, exclusions, fmri_name=None, dry_run=False
+    scan_type, destid, subject, session, output_dir, bids_dir, exclusions, fmri_name=None, dry_run=False
 ):
     """
+    UPDATE: first step is to re-format HCP directory structure to match flywheel zip convention
+       (destination.id/HCPPipe/sub-SUBJECT/ses-SESSION/*)
     zip_output Compresses the complete output of the gear
     (in /flywheel/v0/workdir/<Subject>)
     and places it in the output directory to be catalogued by the application.
@@ -75,12 +77,13 @@ def zip_output(
             'exclude_from_output': files to exclude from the output
             (e.g. hcp-struct files)
     """
-    if scan_type == "func" and fmri_name:
-        output_zipname = op.join(
-            output_dir, f"{subject}_{fmri_name}_hcp{scan_type}.zip",
-        )
-    else:
-        output_zipname = op.join(output_dir, f"{subject}_hcp{scan_type}.zip",)
+    # if scan_type == "func" and fmri_name:
+    #     output_zipname = op.join(
+    #         output_dir, f"{subject}_{fmri_name}_hcp{scan_type}.zip",
+    #     )
+    # else:
+    #     output_zipname = op.join(output_dir, f"{subject}_hcp{scan_type}.zip", )
+    output_zipname = op.join(output_dir, f"{subject}_hcp.zip", )
 
     if exclusions:
         exclude_from_output = exclusions
@@ -95,14 +98,36 @@ def zip_output(
             pass
 
         os.chdir(bids_dir)
-        outzip = ZipFile(output_zipname, "w", ZIP_DEFLATED)
+
+        # duplicate files to be zipped into new directory - then zip
+        newpath = os.path.join(bids_dir,destid,"HCPPipe","sub-"+subject,"ses-"+session)
+        os.makedirs(newpath, exist_ok=True)
+
         for root, _, files in os.walk(subject):
+            os.makedirs(os.path.join(newpath, root), exist_ok=True)
             for fl in files:
                 fl_path = op.join(root, fl)
                 # only if the file is not to be excluded from output
                 if fl_path not in exclude_from_output:
-                    outzip.write(fl_path)
+                    shutil.copy2(fl_path, os.path.join(newpath, fl_path))
+
+        # remove extra subject directory (easier than doing it above)
+        for filename in os.listdir(os.path.join(newpath, subject)):
+            shutil.move(os.path.join(newpath, subject, filename), os.path.join(newpath, filename))
+        os.rmdir(os.path.join(newpath, subject))
+
+        #zip correctly formatted results
+        outzip = ZipFile(output_zipname, "w", ZIP_DEFLATED)
+        for root, _, files in os.walk(os.path.join(destid,"HCPPipe","sub-"+subject,"ses-"+session)):
+            for fl in files:
+                fl_path = op.join(root, fl)
+                outzip.write(fl_path)
+
         outzip.close()
+
+
+        # finally remove temp directory
+        shutil.rmtree(os.path.join(bids_dir,destid))
 
 
 def zip_pipeline_logs(
@@ -120,10 +145,11 @@ def zip_pipeline_logs(
     """
 
     # zip pipeline logs
-    if scan_type == "func" and fmri_name:
-        log_zipname = op.join(output_dir, f"{fmri_name}_{scan_type}_pipeline_logs.zip")
-    else:
-        log_zipname = op.join(output_dir, f"{scan_type}_pipeline_logs.zip")
+    log_zipname = op.join(output_dir, f"pipeline_logs.zip")
+    # if scan_type == "func" and fmri_name:
+    #     log_zipname = op.join(output_dir, f"{fmri_name}_{scan_type}_pipeline_logs.zip")
+    # else:
+    #     log_zipname = op.join(output_dir, f"{scan_type}_pipeline_logs.zip")
     log.info("Zipping pipeline logs to %s", log_zipname)
 
     # Remove pre-existing log zips with the same name
@@ -197,7 +223,9 @@ def cleanup(gear_args: GearToolkitContext):
     )
     zip_output(
         gear_args.common["scan_type"],
+        gear_args.common["destid"],
         gear_args.common["subject"],
+        gear_args.common["session"],
         gear_args.dirs["output_dir"],
         gear_args.dirs["bids_dir"],
         gear_args.common["exclude_from_output"],
@@ -214,7 +242,10 @@ def cleanup(gear_args: GearToolkitContext):
         gear_args.dirs["output_dir"],
         gear_args.fw_specific["gear_dry_run"],
     )
-    export_metadata(gear_args)
+
+    #TODO move csv files to output directory (externalize from other code?)
+    # export_metadata(gear_args) ## this is in final cleanup code
+
     create_error_log(gear_args.common["errors"])
     # List final directory to log
     log.info("Final output directory listing: gear_args.dirs['output_dir']")
