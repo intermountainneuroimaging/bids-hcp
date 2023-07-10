@@ -1,6 +1,5 @@
 from pathlib import Path
-import sys, subprocess, os, logging
-import flywheel, flywheel_gear_toolkit
+import os, logging
 import subprocess as sp
 import pandas as pd
 import math
@@ -9,8 +8,6 @@ import json
 import shutil
 
 log = logging.getLogger(__name__)
-
-fw = flywheel.Client()
 
 def execute_shell(cmd, dryrun=False, cwd=os.getcwd()):
     log.info("\n %s", cmd)
@@ -104,7 +101,7 @@ def symlink_hcp_to_fmripreplike(root_dir, bidspath, source, dest):
     os.symlink(source, dest)
 
 
-def main(root_dir, anlys_id, dryrun= False):
+def main(root_dir, anlys_id, fw, dryrun= False):
     """
     file mapper is used to arrange human connectome minimal preprocesisng pipeline (HCPPipe) into a bids-derivateive format.
     All outputs are symboliclly linked to reduce excess file storage costs. Always retain the original HCPPipe directory.

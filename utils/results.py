@@ -66,7 +66,7 @@ def preserve_safe_list_files(safe_list, output_dir, dry_run=False):
 
 
 def zip_output(
-        destid, subject, session, output_dir, bids_dir, exclusions, dry_run=False
+        destid, subject, session, output_dir, bids_dir, exclusions, flywheel_client=[], dry_run=False
 ):
     """
     UPDATE: first step is to re-format HCP directory structure to match flywheel zip convention
@@ -119,7 +119,7 @@ def zip_output(
         os.rmdir(os.path.join(newpath, subject))
 
         # create bids-derivative naming scheme
-        filemapper.main(os.path.join(bids_dir, destid), destid)
+        filemapper.main(os.path.join(bids_dir, destid), destid, flywheel_client)
 
 
         # NEW method to zip working directory using 'zip --symlinks -r outzip.zip data/'
@@ -216,6 +216,8 @@ def cleanup(gear_args: GearToolkitContext, gtk_context: GearToolkitContext):
         gear_args.common["output_config"], gear_args.common["output_config_filename"]
     )
 
+    fw = gtk_context.client
+
     zip_output(
         gear_args.common["destid"],
         gear_args.common["subject"],
@@ -223,6 +225,7 @@ def cleanup(gear_args: GearToolkitContext, gtk_context: GearToolkitContext):
         gear_args.dirs["output_dir"],
         gear_args.dirs["bids_dir"],
         gear_args.common["exclude_from_output"],
+        flywheel_client=fw,
         dry_run=gear_args.fw_specific["gear_dry_run"],
     )
     zip_pipeline_logs(
