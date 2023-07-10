@@ -14,8 +14,15 @@ from zipfile import ZIP_DEFLATED, ZipFile
 
 import jsonpickle
 from flywheel_gear_toolkit import GearToolkitContext
+from flywheel_gear_toolkit.interfaces.command_line import (
+    build_command_list,
+    exec_command,
+)
+import utils.filemapper as filemapper
+import utils.zip_htmls as zip_htmls
 
 log = logging.getLogger(__name__)
+
 
 # ################################################################################
 # # Clean-up and prepare outputs
@@ -59,7 +66,7 @@ def preserve_safe_list_files(safe_list, output_dir, dry_run=False):
 
 
 def zip_output(
-    scan_type, destid, subject, session, output_dir, bids_dir, exclusions, fmri_name=None, dry_run=False
+        destid, subject, session, output_dir, bids_dir, exclusions, dry_run=False
 ):
     """
     UPDATE: first step is to re-format HCP directory structure to match flywheel zip convention
@@ -77,12 +84,7 @@ def zip_output(
             'exclude_from_output': files to exclude from the output
             (e.g. hcp-struct files)
     """
-    # if scan_type == "func" and fmri_name:
-    #     output_zipname = op.join(
-    #         output_dir, f"{subject}_{fmri_name}_hcp{scan_type}.zip",
-    #     )
-    # else:
-    #     output_zipname = op.join(output_dir, f"{subject}_hcp{scan_type}.zip", )
+
     output_zipname = op.join(output_dir, f"{subject}_hcp.zip", )
 
     if exclusions:
@@ -100,7 +102,7 @@ def zip_output(
         os.chdir(bids_dir)
 
         # duplicate files to be zipped into new directory - then zip
-        newpath = os.path.join(bids_dir,destid,"HCPPipe","sub-"+subject,"ses-"+session)
+        newpath = os.path.join(bids_dir, destid, "HCPPipe", "sub-" + subject, "ses-" + session)
         os.makedirs(newpath, exist_ok=True)
 
         for root, _, files in os.walk(subject):
@@ -116,25 +118,21 @@ def zip_output(
             shutil.move(os.path.join(newpath, subject, filename), os.path.join(newpath, filename))
         os.rmdir(os.path.join(newpath, subject))
 
-        #zip correctly formatted results
-        outzip = ZipFile(output_zipname, "w", ZIP_DEFLATED)
-        for root, _, files in os.walk(os.path.join(destid,"HCPPipe","sub-"+subject,"ses-"+session)):
-            for fl in files:
-                fl_path = op.join(root, fl)
-                outzip.write(fl_path)
+        # create bids-derivative naming scheme
+        filemapper.main(os.path.join(bids_dir, destid), destid)
 
-        outzip.close()
 
+        # NEW method to zip working directory using 'zip --symlinks -r outzip.zip data/'
+        cmd = "zip --symlinks -r " + output_zipname + " " + str(destid)
+        filemapper.execute_shell(cmd, cwd=bids_dir)
 
         # finally remove temp directory
-        shutil.rmtree(os.path.join(bids_dir,destid))
+        shutil.rmtree(os.path.join(bids_dir, destid))
 
 
 def zip_pipeline_logs(
-    scan_type: str,
-    output_dir: os.PathLike,
-    bids_dir: os.PathLike,
-    fmri_name: str = None,
+        output_dir: os.PathLike,
+        bids_dir: os.PathLike,
 ):
     """
     zip_pipeline_logs Compresses files in
@@ -146,10 +144,6 @@ def zip_pipeline_logs(
 
     # zip pipeline logs
     log_zipname = op.join(output_dir, f"pipeline_logs.zip")
-    # if scan_type == "func" and fmri_name:
-    #     log_zipname = op.join(output_dir, f"{fmri_name}_{scan_type}_pipeline_logs.zip")
-    # else:
-    #     log_zipname = op.join(output_dir, f"{scan_type}_pipeline_logs.zip")
     log.info("Zipping pipeline logs to %s", log_zipname)
 
     # Remove pre-existing log zips with the same name
@@ -192,7 +186,7 @@ def export_metadata(gear_args: GearToolkitContext):
     if ("analysis" in metadata) and (len(metadata["analysis"]["info"]) > 0):
         try:
             with open(
-                op.join(gear_args.dirs["output_dir"], ".metadata.json"), "w"
+                    op.join(gear_args.dirs["output_dir"], ".metadata.json"), "w"
             ) as fff:
                 json.dump(metadata, fff)
             log.info(f"Wrote op.join(gear_args.dirs['output_dir'], '.metadata.json')")
@@ -202,7 +196,7 @@ def export_metadata(gear_args: GearToolkitContext):
         log.info("No data available to save in .metadata.json.")
 
 
-def cleanup(gear_args: GearToolkitContext):
+def cleanup(gear_args: GearToolkitContext, gtk_context: GearToolkitContext):
     """
     Execute a series of steps to store outputs on the proper containers.
 
@@ -221,19 +215,17 @@ def cleanup(gear_args: GearToolkitContext):
     save_config(
         gear_args.common["output_config"], gear_args.common["output_config_filename"]
     )
+
     zip_output(
-        gear_args.common["scan_type"],
         gear_args.common["destid"],
         gear_args.common["subject"],
         gear_args.common["session"],
         gear_args.dirs["output_dir"],
         gear_args.dirs["bids_dir"],
         gear_args.common["exclude_from_output"],
-        fmri_name=None,
         dry_run=gear_args.fw_specific["gear_dry_run"],
     )
     zip_pipeline_logs(
-        gear_args.common["scan_type"],
         gear_args.dirs["output_dir"],
         gear_args.dirs["bids_dir"],
     )
@@ -243,7 +235,7 @@ def cleanup(gear_args: GearToolkitContext):
         gear_args.fw_specific["gear_dry_run"],
     )
 
-    #TODO move csv files to output directory (externalize from other code?)
+    # TODO move csv files to output directory (externalize from other code?)
     # export_metadata(gear_args) ## this is in final cleanup code
 
     create_error_log(gear_args.common["errors"])
@@ -271,3 +263,70 @@ def create_error_log(errors):
         )
     if errors:
         log.debug(f"Errors were:\n{errors}")
+
+
+def executivesummary(gear_args: GearToolkitContext):
+    """
+    Run DCAN Lab's executive summary on completed analysis pipeline, zip up for viewing....
+
+    Args:
+        gear_args: The gear context object
+            containing the 'gear_dict' dictionary attribute with keys/values
+            utilized in the called helper functions.
+    """
+    #### run executive report here  - needs to be broken into running shell script, then layout-only py script (workaround)
+    command = []
+    outpath=os.path.join(gear_args.dirs["bids_dir"],gear_args.common["subject"])
+    command.append("/opt/dcan-tools/executivesummary/executivesummary_preproc.sh")
+    params = {"o": outpath,
+              "s": gear_args.common["subject"],
+              "i": os.path.join(gear_args.dirs["bids_dir"], "sub-"+gear_args.common["subject"], "ses-"+gear_args.common["session"], "func")}
+    command = build_command_list(command, params, include_keys=True)
+
+    filemapper.execute_shell(" ".join(command), cwd=gear_args.dirs["bids_dir"])
+
+    cmd = "mkdir -p files ; mv executivesummary files/ ; mv T1_pngs files/ ; mv t1_bs_scene.scene files/"
+    filemapper.execute_shell(cmd, cwd=outpath)
+
+    command = []
+    command.append("python /opt/dcan-tools/executivesummary/ExecutiveSummary.py --layout-only")
+    params = {"o": os.path.join(outpath,"files"),
+              "p": gear_args.common["subject"],
+              "i": os.path.join(gear_args.dirs["bids_dir"], "sub-" + gear_args.common["subject"],
+                                "ses-" + gear_args.common["session"], "func")}
+    command = build_command_list(command, params, include_keys=True)
+
+    stdout_msg = ''
+
+    if gear_args.fw_specific["gear_dry_run"]:
+        log.info("executivesummary command:\n{command}")
+    try:
+        terminal = sp.Popen(
+            " ".join(command),
+            shell=True,
+            stdout=sp.PIPE,
+            stderr=sp.PIPE,
+            universal_newlines=True,
+            cwd=os.getcwd(),
+            env=gear_args.environ,
+        )
+        stdout, stderr = terminal.communicate()
+        log.debug("\n %s", stdout)
+        log.debug("\n %s", stderr)
+
+        returncode = 0
+
+        # zip html output
+        zip_htmls.zip_htmls(gear_args.dirs["output_dir"], gear_args.common["destid"], os.path.join(outpath,"files","executivesummary"))
+
+        if "error" in stderr.lower() or returncode != 0:
+            gear_args["errors"].append(
+                {"message": "executive summary failed. Check log", "exception": stderr}
+            )
+    except Exception as e:
+        if gear_args.config["dry_run"]:
+            # Error thrown due to non-iterable stdout, stderr, returncode
+            pass
+        else:
+            log.exception(e)
+            log.fatal('Unable to run executive summary')

@@ -216,7 +216,7 @@
     },
     "gear-builder": {
       "category": "analysis",
-      "image": "amhe4269/bids-hcp:1.2.5_4.3.0_inc1.4"
+      "image": "amhe4269/bids-hcp:1.2.5_4.3.0_inc1.4rc0"
     }
   },
   "description": "(HPC Compatible) Runs the preprocessing steps of the Human Connectome Project Minimal Preprocessing Pipeline, described in Glasser et al. 2013. Currently this includes v4.3.0 release of PreFreeSurfer, FreeSurfer, and PostFreeSurfer pipelines. This Gear also generates some helpful QC images.",
@@ -300,5 +300,5 @@
   "name": "bids-hcp",
   "source": "https://github.com/intermountainneuroimaging/bids-hcp.git",
   "url": "https://github.com/Washington-University/Pipelines",
-  "version": "1.2.5_4.3.0_inc1.4"
+  "version": "1.2.5_4.3.0_inc1.4rc0"
 }

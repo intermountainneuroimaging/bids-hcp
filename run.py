@@ -17,7 +17,7 @@ from utils import environment, gear_arg_utils, helper_funcs
 from utils.bids import bids_file_locator
 from utils.set_gear_args import GearArgs
 from utils.singularity import run_in_tmp_dir
-from flywheel_gear_toolkit.licenses.freesurfer import install_freesurfer_license
+from utils.freesurfer import install_freesurfer_license
 from utils import freesurfer_utils, helper_funcs, results
 
 log = logging.getLogger(__name__)
@@ -66,6 +66,7 @@ def main(gtk_context):
         e_code == 0
     ):
         e_code += func_main.run(gear_args, bids_info.layout)
+        pass
 
     # Diffusion analysis
     if any(
@@ -79,9 +80,11 @@ def main(gtk_context):
     else:
         return_code = 0
 
+    # run executive summary
+    results.executivesummary(gear_args)
 
     # Try to zip outputs and logs at the end of ALL Stages!
-    results.cleanup(gear_args)
+    results.cleanup(gear_args, gtk_context)
 
     # save metadata
     metadata = {
