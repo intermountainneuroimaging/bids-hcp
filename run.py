@@ -135,7 +135,7 @@ def main(gtk_context):
 if __name__ == "__main__":
 
     # Get access to gear config, inputs, and sdk client if enabled.
-    with GearToolkitContext(config_path='/flywheel/v0/config.json') as gtk_context:
+    with GearToolkitContext() as gtk_context:
         # os.environ["SINGULARITY_NAME"] = "TEST1"
         scratch_dir = run_in_tmp_dir(gtk_context.config["gear-writable-dir"])
     # Has to be instantiated twice here, since parent directories might have
