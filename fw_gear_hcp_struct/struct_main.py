@@ -43,7 +43,7 @@ def run(gear_args):
 
     ###########################################################################
     if ("PostFreeSurfer" in gear_args.common["stages"]) and (rc == 0):
-        # rc = run_postFS(gear_args)
+        rc = run_postFS(gear_args)
         if (gear_args.fw_specific["gear_dry_run"] is False) and (rc == 0):
             run_struct_qc(gear_args)
     return rc

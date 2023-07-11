@@ -27,7 +27,7 @@ def execute_shell(cmd, dryrun=False, cwd=os.getcwd()):
         return stdout.strip('\n')
 
 
-def build_lookup(analysis):
+def build_lookup(analysis, fw):
     subject = fw.get_subject(analysis.parents["subject"])
     session = fw.get_session(analysis.parents["session"])
     gearname = analysis.gear_info["name"]
@@ -121,7 +121,7 @@ def main(root_dir, anlys_id, fw, dryrun= False):
 
     # ------
     analysis = fw.get_analysis(anlys_id)
-    lookup_table = build_lookup(analysis)
+    lookup_table = build_lookup(analysis, fw)
     lookup_table["PIPELINE"] = "bids-hcp"
 
     for k in data.keys():
