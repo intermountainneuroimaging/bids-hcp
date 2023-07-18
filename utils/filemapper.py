@@ -137,7 +137,11 @@ def main(root_dir, anlys_id, fw, dryrun= False):
 
             for idx, x in enumerate(acqs):
 
-                # build lookup table with acquisiton information
+                #skip sbref files
+                if "sbref" in x.label.lower():
+                    continue
+
+                # build lookup table with acquisition information
                 lookup_table_itr = lookup_table
                 lookup_table_itr["ACQ"] = acqs[idx].label.replace("func-bold_", "")
 
@@ -158,7 +162,7 @@ def main(root_dir, anlys_id, fw, dryrun= False):
                     if not dryrun:
                         symlink_hcp_to_fmripreplike(root_dir, bidspath, source, dest)
 
-        # all other acquisiton modalities
+        # all other acquisition modalities
         else:
 
             # apply symbolic linking
