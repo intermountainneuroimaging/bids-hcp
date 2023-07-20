@@ -33,7 +33,7 @@ def set_params(gear_args):
     params["lowresmesh"] = "32"
 
     zooms = (
-        nibabel.load(gear_args.functional["fmri_timecourse"]).get_header().get_zooms()
+        nibabel.load(gear_args.functional["fmri_timecourse"]).header.get_zooms()
     )
     params["fmrires"] = str(int(min(zooms[:3])))
     # params["fmrires"] = "2" # ****config option?****** #generally "2", "1.60" possible

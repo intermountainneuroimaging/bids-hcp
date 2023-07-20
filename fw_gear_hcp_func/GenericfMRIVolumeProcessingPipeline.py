@@ -93,7 +93,7 @@ def set_params(gear_args):
     params["subject"] = gear_args.common["subject"]
 
     zooms = (
-        nibabel.load(gear_args.functional["fmri_timecourse"]).get_header().get_zooms()
+        nibabel.load(gear_args.functional["fmri_timecourse"]).header.get_zooms()
     )
     params["fmrires"] = str(int(min(zooms[:3])))
     # If the zooms are unreliable for some reason, the original code had the following line.

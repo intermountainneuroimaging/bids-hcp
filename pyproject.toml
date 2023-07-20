@@ -21,6 +21,7 @@ pybids = "^0.14.0"
 pytest-mock-generator = "^1.0.0"
 jsonpickle = "^2.0.0"
 flywheel-gear-toolkit = {version = "^0.6.1", extras = ["sdk"]}
+Pillow = "^9.5.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.0.1"

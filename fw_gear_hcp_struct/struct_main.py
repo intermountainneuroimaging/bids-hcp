@@ -35,10 +35,12 @@ def run(gear_args):
 
     if "PreFreeSurfer" in gear_args.common["stages"]:
         rc = run_preFS(gear_args)
+
     ###########################################################################
     # Must do a list comprehension to check for exact match.
     if ("FreeSurfer" in gear_args.common["stages"].split()) and (rc == 0):
         rc = run_FS(gear_args)
+
     ###########################################################################
     if ("PostFreeSurfer" in gear_args.common["stages"]) and (rc == 0):
         rc = run_postFS(gear_args)
