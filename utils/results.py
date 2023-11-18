@@ -123,7 +123,7 @@ def zip_output(
 
 
         # NEW method to zip working directory using 'zip --symlinks -r outzip.zip data/'
-        cmd = "zip --symlinks -r " + output_zipname + " " + str(destid)
+        cmd = "zip --symlinks -rq " + output_zipname + " " + str(destid)
         filemapper.execute_shell(cmd, cwd=bids_dir)
 
         # finally remove temp directory
