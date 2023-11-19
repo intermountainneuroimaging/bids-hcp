@@ -127,7 +127,10 @@ def zip_output(
         filemapper.execute_shell(cmd, cwd=bids_dir)
 
         # finally remove temp directory
-        shutil.rmtree(os.path.join(bids_dir, destid))
+        try:
+            shutil.rmtree(os.path.join(bids_dir, destid))
+        except FileNotFoundError as e:
+            pass
 
 
 def zip_pipeline_logs(
